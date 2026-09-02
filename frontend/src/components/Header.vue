@@ -13,7 +13,7 @@ const { theme } = useTheme();
 
 const route = useRoute();
 
-const currentMedia = computed(() => route.path.split("/")[1] || "book");
+const currentMedia = computed(() => route.path.split("/")[1] || "books");
 const currentView = computed(() => route.path.split("/")[2] || "library");
 
 const isMediaActive = (media) => currentMedia.value === media;

@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
-import BookLibrary from "../views/books/BookLibrary.vue";
-import BookMetrics from "../views/books/BookMetrics.vue";
-import MoviesLibrary from "../views/movies/MoviesLibrary.vue";
-import MoviesMetrics from "../views/movies/MoviesMetrics.vue";
-import AnimeLibrary from "../views/anime/AnimeLibrary.vue";
-import AnimeMetrics from "../views/anime/AnimeMetrics.vue";
+import BookLibrary from "../features/books/views/BookLibrary.vue";
+import BookMetrics from "../features/books/views/BookMetrics.vue";
+import MoviesLibrary from "../features/movies/views/MoviesLibrary.vue";
+import MoviesMetrics from "../features/movies/views/MoviesMetrics.vue";
+import AnimeLibrary from "../features/anime/views/AnimeLibrary.vue";
+import AnimeMetrics from "../features/anime/views/AnimeMetrics.vue";
 
 const routes = [
   {
