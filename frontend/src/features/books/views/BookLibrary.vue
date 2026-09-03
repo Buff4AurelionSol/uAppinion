@@ -1,18 +1,26 @@
 <script setup>
-import { onMounted, ref, watchEffect } from "vue";
+import { onMounted, ref, watch, watchEffect } from "vue";
 import { apiBooks } from "../services/apiBook";
 import Screen from "../../../components/Screen.vue";
+import { useDebounce } from "../../../debounce/useDebounce.js";
 
 const trendingBooks = ref([]);
+const searchQuery = ref("");
+const debounceSearch = useDebounce(searchQuery, 400);
 
 onMounted(async () => {
   const response = await apiBooks.getTrendingBooks();
   trendingBooks.value = response;
 });
+
+watch(debounceSearch, () => {});
 </script>
 
 <template>
   <Screen>
+    <section>
+      <input placeholder="El señor de los anillos..." v-model="searchQuery" />
+    </section>
     <section
       class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 mt-2 mx-2"
     >
