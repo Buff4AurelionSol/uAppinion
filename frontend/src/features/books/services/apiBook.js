@@ -30,13 +30,14 @@ export const apiBooks = {
     return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
   },
 
-  searchBooks: async (query) => {
-    if (!query || !query.trim()) return [];
+  searchBooks: async (query, page = 1, limit = 12) => {
+    if (!query || !query.trim()) return { data: [], totalPages: 0 };
 
     try {
       const search_params = new URLSearchParams({
         q: query.trim(),
-        limit: 12,
+        page,
+        limit,
       });
 
       const response = await fetch(`${BASE_URL}/search.json?${search_params}`);
@@ -46,8 +47,13 @@ export const apiBooks = {
       }
 
       const data = await response.json();
+      const totalBooks = data.numFound || 0;
+      const totalPages = Math.ceil(totalBooks / limit);
 
-      return data?.docs || [];
+      return {
+        data: data?.docs || [],
+        totalPages,
+      };
     } catch (e) {
       console.error("Error al buscar el libro ", e);
       throw e;
