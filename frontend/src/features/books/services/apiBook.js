@@ -11,17 +11,46 @@ export const apiBooks = {
         },
       });
 
+      if (!response.ok) {
+        throw new Error("Error HTTP: ", response.status);
+      }
+
       const data = await response.json();
 
       return data?.works || [];
 
       return data;
     } catch (e) {
-      console.log("Error al traer los libros en tendencia: ", e);
+      console.error("Error al traer los libros en tendencia: ", e);
+      throw e;
     }
   },
 
   getImageUrl: (coverId, size = "M") => {
     return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`;
+  },
+
+  searchBooks: async (query) => {
+    if (!query || !query.trim()) return [];
+
+    try {
+      const search_params = new URLSearchParams({
+        q: query.trim(),
+        limit: 12,
+      });
+
+      const response = await fetch(`${BASE_URL}/search.json?${search_params}`);
+
+      if (!response.ok) {
+        throw new Error("Error HTTP: ", response.status);
+      }
+
+      const data = await response.json();
+
+      return data?.docs || [];
+    } catch (e) {
+      console.error("Error al buscar el libro ", e);
+      throw e;
+    }
   },
 };
