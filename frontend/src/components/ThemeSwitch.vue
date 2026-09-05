@@ -9,8 +9,7 @@ const themeRef = useTheme();
 <template>
   <button
     @click="themeRef.toggleTheme"
-    class="group flex items-center justify-center h-10 w-10 rounded-full"
-    :class="themeRef.theme.value === 'light' ? 'bg-gray-300' : 'bg-gray-600'"
+    class="group flex items-center justify-center h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600"
   >
     <Moon
       class="text-gray-400 hover:text-gray-700"
