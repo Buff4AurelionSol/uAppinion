@@ -4,7 +4,8 @@ import { apiBooks } from "../services/apiBook";
 import Screen from "../../../components/Screen.vue";
 import { useDebounce } from "../../../debounce/useDebounce.js";
 import { keepPreviousData, useQuery } from "@tanstack/vue-query";
-import Modal from "../../../components/Modal.vue";
+import ModalBookReview from "../components/ModalBookReview.vue";
+import BookCard from "../components/BookCard.vue";
 
 const searchQuery = ref("");
 const debounceSearch = useDebounce(searchQuery, 500);
@@ -150,51 +151,13 @@ watch(isOpenModal, (isOpen) => {
       v-else
       class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 mt-2 mx-2"
     >
-      <div
+      <BookCard
         v-for="book in booksToDisplay"
         :key="book.key"
-        class="flex gap-1.5 h-40 bg-gray-200 dark:bg-gray-600 rounded-lg p-2 overflow-hidden"
+        :book="book"
         :class="{ 'opacity-50 pointer-events-none': isFetchingSearch }"
-      >
-        <div
-          class="w-24 h-full shrink-0 bg-gray-300 rounded-md overflow-hidden relative"
-        >
-          <img
-            v-if="book?.cover_i"
-            :src="apiBooks.getImageUrl(book.cover_i, 'M')"
-            :alt="book?.title"
-            class="h-full w-full object-cover rounded-md absolute inset-0"
-          />
-        </div>
-        <div class="flex flex-col justify-between min-w-0 w-full">
-          <div>
-            <h2
-              class="font-bold line-clamp-2 leading-tight text-black dark:text-white"
-            >
-              {{ book?.title }}
-            </h2>
-          </div>
-          <div>
-            <p class="text-sm text-gray-700 dark:text-gray-400 mt-1 truncate">
-              {{ book?.author_name?.join(", ") || "Autor Desconocido." }}
-            </p>
-          </div>
-
-          <div class="mt-2 w-full flex justify-between">
-            <span
-              class="bg-gray-300 px-2 py-1 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-xs truncate shrink"
-            >
-              {{ book?.first_publish_year || "Año desconocido" }}
-            </span>
-            <button
-              @click="openReview(book)"
-              class="bg-sky-500 hover:bg-sky-400 dark:bg-sky-700 dark:hover:bg-sky-600 px-2 py-1 rounded-md text-white font-semibold text-sm"
-            >
-              Reseñar
-            </button>
-          </div>
-        </div>
-      </div>
+        @review="openReview(book)"
+      />
     </section>
     <section
       v-if="debounceSearch.trim() && totalPages > 1"
@@ -235,44 +198,11 @@ watch(isOpenModal, (isOpen) => {
         Siguiente
       </button>
     </section>
-    <Modal v-model="isOpenModal">
-      <div class="flex items-baseline mb-3 gap-2">
-        <h3 class="text-black dark:text-white font-bold text-xl leading-tight">
-          {{ bookSelected?.title }}
-        </h3>
-        <span class="text-gray-500 dark:text-gray-400 text-lg shrink-0">
-          {{ bookSelected?.first_publish_year }}
-        </span>
-      </div>
-      <div class="flex items-start gap-6 mt-4">
-        <div class="flex flex-1 flex-col gap-2">
-          <label class="relative w-full">
-            <input
-              type="text"
-              class="border w-full border-gray-300 dark:border-gray-400 focus:outline-gray-300 focus:outline-2 dark:focus:outline-gray-400 focus:outline-offset-2 p-3 rounded-md transition-all text-black dark:text-white dark:bg-gray-800 peer"
-            />
-
-            <span
-              class="text-black dark:text-white absolute left-0 top-2 ml-3 tracking-wide pointer-events-none peer-focus:text-gray-400 peer-focus:text-sm peer-focus:-translate-y-5 duration-200 bg-white dark:bg-gray-800"
-              >Número de páginas</span
-            >
-          </label>
-          <textarea
-            placeholder="Agrega una reseña"
-            class="w-full min-h-24 max-h-44 border border-gray-300 dark:border-gray-400 focus:outline-gray-300 dark:focus:outline-gray-400 focus:outline-2 focus:outline-offset-2 p-3 rounded-md transition-all text-black dark:text-white resize-none field-sizing-content appearance-none dark:bg-gray-800 overflow-y-auto"
-            autocomplete="off"
-          >
-          </textarea>
-        </div>
-        <div class="w-24 h-40 shrink-0 rounded-md overflow-hidden relative">
-          <img
-            v-if="bookSelected?.cover_i"
-            :src="apiBooks.getImageUrl(bookSelected.cover_i, 'M')"
-            :alt="bookSelected?.title"
-            class="h-full w-full object-cover rounded-md absolute inset-0"
-          />
-        </div>
-      </div>
-    </Modal>
+    <ModalBookReview
+      :title="bookSelected?.title"
+      :first_publish_year="bookSelected?.first_publish_year"
+      :cover_i="bookSelected?.cover_i"
+      v-model="isOpenModal"
+    />
   </Screen>
 </template>
