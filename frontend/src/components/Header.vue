@@ -5,7 +5,7 @@ import { Tv } from "@lucide/vue";
 import ThemeSwitch from "./ThemeSwitch.vue";
 import { ChartLine } from "@lucide/vue";
 import { Library } from "@lucide/vue";
-import { useTheme } from "../const/useTheme.js";
+
 import { useRoute } from "vue-router";
 import { computed, watchEffect } from "vue";
 
