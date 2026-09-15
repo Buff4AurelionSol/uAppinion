@@ -2,6 +2,6 @@
 
 <template>
   <section>
-    <p>Hola soy la libreria de los libros</p>
+    <p>Hola soy el catalogo de las películas cuaaaas</p>
   </section>
 </template>
