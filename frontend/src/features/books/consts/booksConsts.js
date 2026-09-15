@@ -10,3 +10,15 @@ export const formatsValues = {
   digital: "Digital",
   audio: "Audio",
 };
+
+export const requiredFields = ["status", "num_pages"];
+
+export const INITIAL_REVIEW_FORM = {
+  status: "",
+  format: "",
+  start_date: "",
+  finish_date: "",
+  num_pages: "",
+  text_review: "",
+  is_read: false,
+};
