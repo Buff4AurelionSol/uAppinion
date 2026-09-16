@@ -1,7 +1,8 @@
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Text, Integer, Date, ForeignKey, Boolean
 from backend.config.db import Base
 from datetime import date
+from backend.models.book import Book
 
 class Review(Base):
     __tablename__ = "reviews"
@@ -13,3 +14,5 @@ class Review(Base):
     finish_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False)
     text_review: Mapped[str | None] = mapped_column(Text, nullable=True )
+
+    book:Mapped["Book"] = relationship("Book", lazy="select")

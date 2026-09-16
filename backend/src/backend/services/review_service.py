@@ -1,7 +1,7 @@
 from backend.schemas.review import ReviewCreate
 from backend.models.review import Review
 from backend.models.book import Book
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
@@ -35,3 +35,7 @@ def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ocurrió un error inesperado: {str(e)}"
         )
+
+def get_my_library_books(db:Session) -> list[Review]: 
+    return db.query(Review).options(joinedload(Review.book)).all()
+    
