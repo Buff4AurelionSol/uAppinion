@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Query
 from sqlalchemy.orm import Session
 from backend.schemas.review import ReviewResponse, ReviewCreate
 from backend.services.review_service import create_review_with_book, get_my_library_books
@@ -13,6 +13,6 @@ def create_book_review(review_in: ReviewCreate, db: Session = Depends(get_db) ):
     return new_review
 
 @router.get("/books/library")
-def get_library_book(db: Session = Depends(get_db)): 
-    my_library_books = get_my_library_books(db)
+def get_library_book( page: int = Query(1, ge=1, description="Número de página"), limit: int = Query(1, ge=1, le=100, description="Tamaño de la página"),  db: Session = Depends(get_db)): 
+    my_library_books = get_my_library_books(db, page, limit)
     return my_library_books

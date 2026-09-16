@@ -4,6 +4,7 @@ from backend.models.book import Book
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
+import math
 
 
 def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
@@ -36,6 +37,28 @@ def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
             detail=f"Ocurrió un error inesperado: {str(e)}"
         )
 
-def get_my_library_books(db:Session) -> list[Review]: 
-    return db.query(Review).options(joinedload(Review.book)).all()
+def get_my_library_books(db:Session, page: int = 1, limit:int = 10): 
+
+    offset = (page - 1) * limit
+    total = db.query(Review).count()
+
+    if(total < 1): return {"reviews": [], "total": 0, "limit": limit, "pages": 0}
+
+    items = (
+        db.query(Review)
+        .options(joinedload(Review.book))
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
+
+    pages = math.ceil(total/limit)
+
+
+    return { 
+        "reviews": items, 
+        "total": total, 
+        "limit":limit, 
+        "pages": pages
+    }
     
