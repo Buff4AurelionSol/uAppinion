@@ -1,10 +1,12 @@
 from backend.schemas.review import ReviewCreate
 from backend.models.review import Review
-from backend.models.book import Book
+from backend.models.book import Book, Genre
 from backend.services.genre_service import add_new_genre
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, contains_eager, Query
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+
 import math
 
 
@@ -44,16 +46,28 @@ def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
             detail=f"Ocurrió un error inesperado: {str(e)}"
         )
 
-def get_my_library_books(db:Session, page: int = 1, limit:int = 10): 
+def get_my_library_books(db:Session, page: int = 1, limit:int = 10, search: str = None, genre_id: int = None, order_by: str = None): 
 
     offset = (page - 1) * limit
-    total = db.query(Review).count()
+    query = db.query(Review).join(Review.book)
+
+    if search:
+        search_aux = f"%{search}%"
+        query = query.filter(Book.title.ilike(search_aux))
+
+    if genre_id:
+        query = query.filter(Book.genres.any(Genre.id == genre_id))
+
+
+    total = query.count()
 
     if(total < 1): return {"reviews": [], "total": 0, "limit": limit, "pages": 0}
 
+    query = apply_book_order(query, order_by)
+
     items = (
-        db.query(Review)
-        .options(joinedload(Review.book))
+        query
+        .options(contains_eager(Review.book))
         .offset(offset)
         .limit(limit)
         .all()
@@ -68,4 +82,15 @@ def get_my_library_books(db:Session, page: int = 1, limit:int = 10):
         "limit":limit, 
         "pages": pages
     }
-    
+
+
+def apply_book_order(query: Query, order_by: str) -> Query: 
+    match order_by:
+        case "title_asc":
+            return query.order_by(func.lower(Book.title).asc())
+
+        case "date":
+            return query.order_by(Book.first_publish_year.desc())
+
+        case "created_at" | _:
+            return query.order_by(Review.created_at.desc())
