@@ -59,4 +59,36 @@ export const apiBooks = {
       throw e;
     }
   },
+
+  getGenresByBook: async (bookKey) => {
+    try {
+      const response = await fetch(`${BASE_URL}${bookKey}.json`);
+      const data = await response.json();
+      if (!data.subjects) return [];
+
+      const genres = data.subjects.flatMap((subjectString) =>
+        subjectString.split(",").map((genre) => genre.trim()),
+      );
+
+      console.log(genres);
+
+      return genres;
+    } catch (e) {
+      console.error(
+        "Hubo un error al conseguir los géneros del libro desde la API EXTERNA ",
+        e,
+      );
+      return [];
+    }
+  },
+
+  getAllMyGenres: async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/genres");
+      const data = await response.json();
+      return data || [];
+    } catch (e) {
+      console.error("Hubo un error al traer los géneros de los libros");
+    }
+  },
 };
