@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from backend.endpoints.reviews import router as review_router
+from backend.endpoints.api import central_router
 from sqlalchemy import text
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-app.include_router(review_router)
+app.include_router(central_router)
 
 Base.metadata.create_all(bind=engine)
 
