@@ -8,7 +8,8 @@ import {
   requiredFields,
   statusesValues,
 } from "../consts/booksConsts.js";
-import { ref, watch, watchEffect } from "vue";
+import { computed, ref, watch, watchEffect } from "vue";
+import { useQuery } from "@tanstack/vue-query";
 const props = defineProps({
   bookKey: String,
   title: String,
@@ -18,6 +19,12 @@ const props = defineProps({
 
 const isOpenModal = defineModel();
 const formBookReview = ref({ ...INITIAL_REVIEW_FORM });
+
+const { data: genresBook, isLoading } = useQuery({
+  queryKey: ["genres", () => props.bookKey],
+  queryFn: () => apiBooks.getGenresByBook(props.bookKey),
+  enabled: computed(() => !!props.bookKey && isOpenModal.value),
+});
 
 const buildReviewPayload = (formData, bookProps) => {
   return {
@@ -33,6 +40,7 @@ const buildReviewPayload = (formData, bookProps) => {
       title: bookProps.title,
       first_publish_year: bookProps.first_publish_year,
       cover_i: bookProps.cover_i,
+      genres: genresBook.value,
     },
   };
 };
@@ -50,7 +58,7 @@ const sendBookReview = async () => {
   const dataToSend = buildReviewPayload(formBookReview.value, props);
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/books/library", {
+    const response = await fetch("http://127.0.0.1:8000/books/catalog", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
