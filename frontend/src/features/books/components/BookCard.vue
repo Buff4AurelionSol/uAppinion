@@ -6,9 +6,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  actionText: {
+    type: String,
+    default: "Reseñar",
+  },
 });
 
-defineEmits(["review"]);
+defineEmits(["action"]);
 </script>
 
 <template>
@@ -46,10 +50,10 @@ defineEmits(["review"]);
           {{ book?.first_publish_year || "Año desconocido" }}
         </span>
         <button
-          @click="$emit('review')"
+          @click="$emit('action')"
           class="bg-sky-500 hover:bg-sky-400 dark:bg-sky-700 dark:hover:bg-sky-600 px-2 py-1 rounded-md text-white font-semibold text-sm"
         >
-          Reseñar
+          {{ actionText }}
         </button>
       </div>
     </div>
