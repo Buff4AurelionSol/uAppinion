@@ -91,4 +91,38 @@ export const apiBooks = {
       console.error("Hubo un error al traer los géneros de los libros");
     }
   },
+
+  getMyCatalogLibraryBooks: async ({
+    page = 1,
+    limit = 12,
+    search = "",
+    genre_id = "",
+    order_by = "",
+  }) => {
+    try {
+      const params = new URLSearchParams({
+        page,
+        limit,
+      });
+
+      if (search) params.append("search", search);
+      if (genre_id) params.append("genre_id", genre_id);
+      if (order_by) params.append("order_by", order_by);
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/books/library?${params.toString()}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Error HTTP: ", response.status);
+      }
+
+      return await response.json();
+    } catch (e) {
+      console.error(
+        "Hubo un error al traer el catalogo de mi libreria de libros.",
+      );
+      throw e;
+    }
+  },
 };
