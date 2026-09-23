@@ -1,7 +1,10 @@
+from typing import TYPE_CHECKING
 from backend.config.db import Base
 from sqlalchemy import String,  Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .associations import book_genre_association
+from .associations import book_genre_association, book_authors
+if TYPE_CHECKING:
+    from backend.models.author import Author
 
 class Book(Base): 
     __tablename__ = "books"
@@ -11,7 +14,14 @@ class Book(Base):
     cover_i: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     genres: Mapped[list["Genre"]] = relationship(
+        "Genre",
         secondary=book_genre_association, 
+        back_populates="books"
+    )
+
+    authors: Mapped[list["Author"]] = relationship(
+        "Author",
+        secondary=book_authors,
         back_populates="books"
     )
 
@@ -22,6 +32,7 @@ class Genre(Base):
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
 
     books: Mapped[list["Book"]] = relationship(
+        "Book",
         secondary=book_genre_association, 
         back_populates="genres"
     )
