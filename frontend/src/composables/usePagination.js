@@ -35,7 +35,7 @@ export function usePagination(totalPages, initialPage = 1) {
       pages.push("...");
     }
 
-    if (firsPage < prevPage) {
+    if (firsPage < previousPage) {
       pages.push(previousPage);
     }
 
