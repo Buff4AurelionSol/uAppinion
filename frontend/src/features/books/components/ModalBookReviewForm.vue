@@ -1,5 +1,5 @@
 <script setup>
-import { apiBooks } from "../services/apiBook";
+import { apiBooks } from "../services/apiBook.js";
 import Modal from "../../../components/Modal.vue";
 import Select from "../../../components/Select.vue";
 import {
@@ -8,13 +8,17 @@ import {
   requiredFields,
   statusesValues,
 } from "../consts/booksConsts.js";
-import { computed, ref, watch, watchEffect } from "vue";
+import { computed, ref, watch } from "vue";
 import { useQuery } from "@tanstack/vue-query";
 const props = defineProps({
   bookKey: String,
   title: String,
   first_publish_year: Number,
   cover_i: [String, Number],
+  authors: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const isOpenModal = defineModel();
@@ -41,6 +45,7 @@ const buildReviewPayload = (formData, bookProps) => {
       first_publish_year: bookProps.first_publish_year,
       cover_i: bookProps.cover_i,
       genres: genresBook.value,
+      authors: bookProps.authors,
     },
   };
 };
