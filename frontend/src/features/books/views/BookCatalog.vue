@@ -4,14 +4,20 @@ import { apiBooks } from "../services/apiBook";
 import Screen from "../../../components/Screen.vue";
 import { useDebounce } from "../../../debounce/useDebounce.js";
 import { keepPreviousData, useQuery } from "@tanstack/vue-query";
-import ModalBookReview from "../components/ModalBookReview.vue";
 import BookCard from "../components/BookCard.vue";
+import { usePagination } from "../../../composables/usePagination.js";
+import Pagination from "../../../components/Pagination.vue";
+import ModalBookReviewForm from "../components/ModalBookReviewForm.vue";
 
 const searchQuery = ref("");
 const debounceSearch = useDebounce(searchQuery, 500);
-const page = ref(1);
 const isOpenModal = ref(false);
 const bookSelected = ref(null);
+
+const totalPagesRef = computed(() => searchBooks.value?.totalPages || 0);
+
+const { visiblePages, page, nextPage, prevPage, setPage } =
+  usePagination(totalPagesRef);
 
 const {
   data: trendingBooks,
@@ -54,64 +60,9 @@ const booksToDisplay = computed(() => {
     : trendingBooks.value || [];
 });
 
-const totalPages = computed(() => searchBooks.value?.totalPages || 0);
-
-const prevPage = () => {
-  if (page.value > 1) page.value--;
-};
-
-const nextPage = () => {
-  if (page.value < totalPages.value) page.value++;
-};
-
 watch(debounceSearch, () => {
-  page.value = 1;
+  setPage(1);
 });
-
-const visiblePages = computed(() => {
-  const total = totalPages.value;
-  const currentPage = page.value;
-
-  if (total <= 1) return total === 1 ? [1] : [];
-
-  const pages = [];
-  const firstPage = 1;
-  const lastPage = total;
-  const previousPage = currentPage - 1;
-  const nextPage = currentPage + 1;
-
-  pages.push(firstPage);
-
-  if (Math.abs(firstPage - previousPage) > 1) {
-    pages.push("...");
-  }
-
-  if (firstPage < previousPage) {
-    pages.push(previousPage);
-  }
-
-  if (currentPage !== firstPage && currentPage !== lastPage) {
-    pages.push(currentPage);
-  }
-
-  if (nextPage < lastPage) {
-    pages.push(nextPage);
-  }
-
-  if (Math.abs(nextPage - lastPage) > 1) {
-    pages.push("...");
-  }
-
-  pages.push(lastPage);
-
-  return pages;
-});
-
-const goToPage = (numberPage) => {
-  if (numberPage >= 1 && numberPage <= totalPages.value) {
-    page.value = numberPage;
-  }
-};
 
 const openModal = () => {
   isOpenModal.value = true;
@@ -156,53 +107,28 @@ watch(isOpenModal, (isOpen) => {
         :key="book.key"
         :book="book"
         :class="{ 'opacity-50 pointer-events-none': isFetchingSearch }"
-        @review="openReview(book)"
+        @action="openReview(book)"
       />
     </section>
     <section
-      v-if="debounceSearch.trim() && totalPages > 1"
+      v-if="debounceSearch.trim() && totalPagesRef > 1"
       class="flex justify-center items-center gap-4 mt-2"
     >
-      <button
-        @click="prevPage"
-        :disabled="page === 1"
-        class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-black dark:text-white py-2 px-4 rounded-sm disabled:opacity-50 transition-colors duration-300"
-      >
-        Anterior
-      </button>
-      <template v-for="(p, i) in visiblePages">
-        <button
-          v-if="p !== '...'"
-          :key="'btn-' + i"
-          @click="goToPage(p)"
-          class="px-2 py-2 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded-md transition-colors duration-300"
-          :class="p === page ? 'bg-sky-400 text-white dark:bg-sky-800' : ''"
-        >
-          {{ p }}
-        </button>
-
-        <span
-          v-else
-          :key="'dots-' + i"
-          class="px-2 py-2 bg-gray-200 dark:bg-gray-600 text-black dark:text-white rounded-md select-none transition-colors duration-300"
-        >
-          {{ p }}
-        </span>
-      </template>
-
-      <button
-        @click="nextPage"
-        :disabled="page === totalPages"
-        class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-black dark:text-white py-2 px-4 rounded-sm disabled:opacity-50 transition-colors duration-300"
-      >
-        Siguiente
-      </button>
+      <Pagination
+        :currentPage="page"
+        :totalPages="totalPagesRef"
+        :visiblePages="visiblePages"
+        @prev="prevPage"
+        @next="nextPage"
+        @setPage="setPage"
+      />
     </section>
-    <ModalBookReview
+    <ModalBookReviewForm
       :bookKey="bookSelected?.key"
       :title="bookSelected?.title"
       :first_publish_year="bookSelected?.first_publish_year"
       :cover_i="bookSelected?.cover_i"
+      :authors="bookSelected?.author_name"
       v-model="isOpenModal"
     />
   </Screen>
