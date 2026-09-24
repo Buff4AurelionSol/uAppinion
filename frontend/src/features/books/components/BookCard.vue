@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from "vue";
 import { apiBooks } from "../services/apiBook";
 
 const props = defineProps({
@@ -10,6 +11,10 @@ const props = defineProps({
     type: String,
     default: "Reseñar",
   },
+});
+
+const myAuthorsNames = computed(() => {
+  return props.book?.authors.map((item) => item.name).join(", ");
 });
 
 defineEmits(["action"]);
@@ -38,8 +43,23 @@ defineEmits(["action"]);
         </h2>
       </div>
       <div>
-        <p class="text-sm text-gray-700 dark:text-gray-400 mt-1 truncate">
-          {{ book?.author_name?.join(", ") || "Autor Desconocido." }}
+        <p
+          v-if="book?.author_name?.length"
+          class="text-sm text-gray-700 dark:text-gray-400 mt-1 truncate"
+        >
+          {{ book.author_name?.join(", ") }}
+        </p>
+        <p
+          v-else-if="book?.authors?.length"
+          class="text-sm text-gray-700 dark:text-gray-400 mt-1 truncate"
+        >
+          {{ myAuthorsNames }}
+        </p>
+        <p
+          v-else
+          class="text-sm text-gray-700 dark:text-gray-400 mt-1 truncate"
+        >
+          {{ "Autor Desconocido." }}
         </p>
       </div>
 
