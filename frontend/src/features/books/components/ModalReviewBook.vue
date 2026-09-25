@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import Modal from "../../../components/Modal.vue";
 import { apiBooks } from "../services/apiBook.js";
+import { statusesValues } from "../consts/booksConsts.js";
 
 const props = defineProps({
   review: {
@@ -14,6 +15,14 @@ const isOpenModal = defineModel();
 const limitedGenres = computed(
   () => props.review?.book?.genres?.slice(0, 6) || [],
 );
+
+const myStatus = computed(() => {
+  if (!props.review?.status) return null;
+
+  return (
+    statusesValues.find((item) => item.value === props.review?.status) || null
+  );
+});
 </script>
 
 <template>
@@ -29,9 +38,20 @@ const limitedGenres = computed(
       </div>
       <div class="w-full flex flex-col gap-4">
         <div class="flex flex-col gap-3">
-          <h3 class="text-2xl font-bold dark:text-white leading-tight">
-            {{ review?.book?.title }}
-          </h3>
+          <div class="flex justify-between">
+            <div>
+              <h3 class="text-2xl font-bold dark:text-white leading-tight">
+                {{ review?.book?.title }}
+              </h3>
+            </div>
+            <div
+              v-if="myStatus"
+              class="px-1.5 py-0.5 rounded-md flex items-center shrink-0"
+              :class="myStatus?.classes"
+            >
+              <span>{{ myStatus?.label }}</span>
+            </div>
+          </div>
           <h3 class="text-md text-sky-600 dark:text-sky-400">
             {{ review?.book?.authors?.map((item) => item.name).join(", ") }}
           </h3>

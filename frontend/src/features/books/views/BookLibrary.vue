@@ -95,6 +95,7 @@ const openReview = (review) => {
         :key="review.book.key"
         :book="review.book"
         actionText="Ver reseña"
+        :status="review.status"
         :class="{ 'opacity-50 pointer-events-none': isFetchingBooks }"
         @action="openReview(review)"
       />

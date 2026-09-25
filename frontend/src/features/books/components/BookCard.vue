@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { apiBooks } from "../services/apiBook";
+import { statusesValues } from "../consts/booksConsts";
 
 const props = defineProps({
   book: {
@@ -11,10 +12,19 @@ const props = defineProps({
     type: String,
     default: "Reseñar",
   },
+  status: {
+    type: String,
+  },
 });
 
 const myAuthorsNames = computed(() => {
   return props.book?.authors.map((item) => item.name).join(", ");
+});
+
+const myStatus = computed(() => {
+  if (!props.status) return null;
+
+  return statusesValues.find((item) => item.value === props.status) || null;
 });
 
 defineEmits(["action"]);
@@ -35,12 +45,21 @@ defineEmits(["action"]);
       />
     </div>
     <div class="flex flex-col justify-between min-w-0 w-full">
-      <div>
-        <h2
-          class="font-bold line-clamp-2 leading-tight text-black dark:text-white"
+      <div class="flex justify-between">
+        <div>
+          <h2
+            class="font-bold line-clamp-2 leading-tight text-black dark:text-white"
+          >
+            {{ book?.title }}
+          </h2>
+        </div>
+        <div
+          v-if="myStatus"
+          class="px-1.5 py-0.5 rounded-md flex items-center shrink-0"
+          :class="myStatus?.classes"
         >
-          {{ book?.title }}
-        </h2>
+          <span>{{ myStatus?.label }}</span>
+        </div>
       </div>
       <div>
         <p
