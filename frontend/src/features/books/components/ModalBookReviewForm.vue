@@ -78,7 +78,7 @@ const sendBookReview = async () => {
     }
 
     const result = await response.json();
-    console.log("Guardado con exito", result);
+    formBookReview.value = { ...INITIAL_REVIEW_FORM };
   } catch (e) {
     console.error("Error en la petición:", e);
   }
