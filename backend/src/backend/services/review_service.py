@@ -6,7 +6,9 @@ from backend.services.genre_service import add_new_genre
 from sqlalchemy.orm import Session, contains_eager, Query
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, or_
+from sqlalchemy import select, func, or_, desc
+from backend.const.consts import statusesValues
+from datetime import date
 
 import math
 
@@ -93,6 +95,101 @@ def get_my_library_books(db:Session, page: int = 1, limit:int = 10, search: str 
         "pages": pages
     }
 
+def get_my_metrics_books(
+    db:Session, 
+    status: str ="read",  
+    year: int| None = None, 
+    start_date:date| None = None, 
+    end_date: date| None = None
+):
+    
+    base_filter = build_status_filter_to_review(
+     status=status, 
+     year=year,
+     start_date=start_date, 
+     end_date=end_date
+    )
+
+    group_by_month = True if year or (start_date and end_date and start_date.year == end_date.year) else False
+    time_format = "YYYY-MM" if group_by_month else "YYYY"
+    time_bucket = func.to_char(Review.finish_date, time_format)
+    
+    total_books_read, total_pages_read, average_pages_read = db.query(
+        func.count(Review.id),
+        func.sum(Review.num_pages),
+        func.avg(Review.num_pages)
+        ).filter(*base_filter).first()
+
+
+    books_per_period_query = db.query(
+        time_bucket.label("period"), 
+        func.count(Review.id).label("total"),
+        func.sum(Review.num_pages).label("total_pages")
+    ).filter(
+        *base_filter,
+        Review.finish_date.isnot(None)
+    ) .group_by(time_bucket).order_by(time_bucket.desc()).all()
+
+    books_per_period = [{"period": row.period, "total": row.total} for row in books_per_period_query]
+    pages_per_period = [{"period": row.period, "total_pages": row.total_pages or 0} for row in books_per_period_query]
+    
+    top_genres = get_top_genres(db, base_filter)
+    top_authors = get_top_authors(db, base_filter)
+
+    return {
+        "total_books_read": total_books_read or 0,
+        "total_pages_read": total_pages_read or 0,
+        "average_pages_read": round(float(average_pages_read), 2) if average_pages_read else 0,
+        "books_per_period": books_per_period,
+        "pages_per_period": pages_per_period,
+        "top_genres": top_genres,
+        "top_authors": top_authors
+    }
+    
+
+def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
+    aux_author = []
+    for name in author_names:
+        author = db.query(Author).filter(Author.name == name).first()
+        if not author:
+            author = Author(name=name)
+            db.add(author)
+            db.flush()
+        aux_author.append(author)
+    return aux_author
+
+def get_top_genres(db:Session, base_filters: list):
+
+    top_genres_query = db.query(
+        Genre.name.label("genre_name"),
+        func.count(Review.id).label("total_books")
+    ).join(Book, Review.book_id == Book.key)\
+    .join(Book.genres)\
+    .filter(*base_filters)\
+    .group_by(Genre.id, Genre.name)\
+    .order_by(desc("total_books"))\
+    .limit(10).all()
+
+    return [{"name": row.genre_name, "books": row.total_books} for row in top_genres_query]
+
+def get_top_authors(db:Session, base_filters: list):
+
+    stm = (
+        select(
+            Author.name.label("author_name"),
+            func.count(Review.id).label("total_books"),
+            func.sum(Review.num_pages).label("total_pages")
+    )
+    .join(Book, Review.book_id == Book.key)
+    .join(Book.authors)
+    .where(*base_filters)
+    .group_by(Author.id, Author.name)
+    .order_by(desc("total_books"))
+    .limit(10))
+
+    top_authors = db.execute(stm).all()
+
+    return [{"name": row.author_name, "total_books": row.total_books, "total_pages": row.total_pages} for row in top_authors]
 
 def apply_book_order(query: Query, order_by: str) -> Query: 
     match order_by:
@@ -105,13 +202,24 @@ def apply_book_order(query: Query, order_by: str) -> Query:
         case "created_at" | _:
             return query.order_by(Review.created_at.desc())
 
-def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
-    aux_author = []
-    for name in author_names:
-        author = db.query(Author).filter(Author.name == name).first()
-        if not author:
-            author = Author(name=name)
-            db.add(author)
-            db.flush()
-        aux_author.append(author)
-    return aux_author
+
+def build_status_filter_to_review(
+    status: str | None = None, 
+    year: int | None = None, 
+    start_date: date | None = None,
+    end_date: date | None = None
+) -> list:
+    
+    base_filters = []
+    if status and status in statusesValues:
+        base_filters.append(Review.status == status)
+    if start_date:
+        base_filters.append(Review.start_date >= start_date)
+    if end_date:
+        base_filters.append(Review.finish_date <= end_date)
+    elif year: 
+        base_filters.append(Review.start_date >= date(year, 1,1))
+        base_filters.append(Review.finish_date <= date(year,12,31))
+
+    return base_filters
+    

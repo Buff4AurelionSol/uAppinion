@@ -1,0 +1,1 @@
+statusesValues = [ "read", "reading", "plan_to_read", "dropped"]
