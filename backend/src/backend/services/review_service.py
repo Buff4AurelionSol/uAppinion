@@ -159,24 +159,30 @@ def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
     return aux_author
 
 def get_top_genres(db:Session, base_filters: list):
+    stm = (
+        select(
+            Genre.name.label("name"),
+            func.count(Review.id).label("books")
+        )
+        .join(Book, Review.book_id == Book.key)
+        .join(Book.genres)
+        .where(*base_filters)
+        .group_by(Genre.id, Genre.name)
+        .order_by(desc("total_books"))
+        .limit(10)
+    )
+     
 
-    top_genres_query = db.query(
-        Genre.name.label("genre_name"),
-        func.count(Review.id).label("total_books")
-    ).join(Book, Review.book_id == Book.key)\
-    .join(Book.genres)\
-    .filter(*base_filters)\
-    .group_by(Genre.id, Genre.name)\
-    .order_by(desc("total_books"))\
-    .limit(10).all()
+    top_genres_query = db.execute(stm).mappings().all()
+    return top_genres_query
 
-    return [{"name": row.genre_name, "books": row.total_books} for row in top_genres_query]
+     
 
 def get_top_authors(db:Session, base_filters: list):
 
     stm = (
         select(
-            Author.name.label("author_name"),
+            Author.name.label("name"),
             func.count(Review.id).label("total_books"),
             func.sum(Review.num_pages).label("total_pages")
     )
@@ -187,9 +193,9 @@ def get_top_authors(db:Session, base_filters: list):
     .order_by(desc("total_books"))
     .limit(10))
 
-    top_authors = db.execute(stm).all()
+    top_authors = db.execute(stm).mappings().all()
 
-    return [{"name": row.author_name, "total_books": row.total_books, "total_pages": row.total_pages} for row in top_authors]
+    return top_authors
 
 def apply_book_order(query: Query, order_by: str) -> Query: 
     match order_by:
