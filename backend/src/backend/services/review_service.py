@@ -6,7 +6,7 @@ from backend.services.genre_service import add_new_genre
 from sqlalchemy.orm import Session, contains_eager, Query
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, func, or_, desc
+from sqlalchemy import select, func, or_, desc, text
 from backend.const.consts import statusesValues
 from datetime import date
 
@@ -131,24 +131,31 @@ def get_my_metrics_books(
     time_format = "YYYY-MM" if group_by_month else "YYYY"
     time_bucket = func.to_char(Review.finish_date, time_format)
     
-    total_books_read, total_pages_read, average_pages_read = db.query(
+    overall_stmt = select(
         func.count(Review.id),
         func.sum(Review.num_pages),
         func.avg(Review.num_pages)
-        ).filter(*base_filter).first()
+        ).where(*base_filter)
+
+    total_books_read, total_pages_read, average_pages_read = db.execute(overall_stmt).first()
 
 
-    books_per_period_query = db.query(
-        time_bucket.label("period"), 
-        func.count(Review.id).label("total"),
-        func.sum(Review.num_pages).label("total_pages")
-    ).filter(
+    books_per_period_query = (
+        select(
+            time_bucket.label("period"), 
+            func.count(Review.id).label("total"),
+            func.sum(Review.num_pages).label("total_pages")
+    )
+    .where(
         *base_filter,
         Review.finish_date.isnot(None)
-    ) .group_by(time_bucket).order_by(time_bucket.desc()).all()
+    ) 
+    .group_by(time_bucket).order_by(time_bucket.desc())
+    )
+    periods_data_rows = db.execute(books_per_period_query).mappings().all()
 
-    books_per_period = [{"period": row.period, "total": row.total} for row in books_per_period_query]
-    pages_per_period = [{"period": row.period, "total_pages": row.total_pages or 0} for row in books_per_period_query]
+    books_per_period = [{"period": row["period"], "total": row["total"]} for row in periods_data_rows]
+    pages_per_period = [{"period": row["period"], "total_pages": row["total_pages"]} for row in periods_data_rows]
     
     top_genres = get_top_genres(db, base_filter)
     top_authors = get_top_authors(db, base_filter)
@@ -187,7 +194,7 @@ def get_top_genres(db:Session, base_filters: list):
         .join(Book.genres)
         .where(*base_filters)
         .group_by(Genre.id, Genre.name)
-        .order_by(desc("total_books"))
+        .order_by(desc(text("books")))
         .limit(10)
     )
      
@@ -209,7 +216,7 @@ def get_top_authors(db:Session, base_filters: list):
     .join(Book.authors)
     .where(*base_filters)
     .group_by(Author.id, Author.name)
-    .order_by(desc("total_books"))
+    .order_by(desc(text("total_books")))
     .limit(10))
 
     top_authors = db.execute(stmt).mappings().all()
