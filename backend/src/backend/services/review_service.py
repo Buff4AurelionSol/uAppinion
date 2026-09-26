@@ -52,38 +52,55 @@ def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
             detail=f"Ocurrió un error inesperado: {str(e)}"
         )
 
-def get_my_library_books(db:Session, page: int = 1, limit:int = 10, search: str = None, genre_id: int = None, order_by: str = None): 
+def get_my_library_books(
+    db:Session, 
+    page: int = 1, 
+    limit:int = 10, 
+    search: str = None,
+    genre_id: int = None, 
+    order_by: str = None
+): 
 
     offset = (page - 1) * limit
-    query = db.query(Review).join(Review.book)
-
-    total_pages_read = db.query(func.sum(Review.num_pages)).scalar() or 0
+    
+    stmt = select(Review).join(Review.book)
 
     if search:
         search_aux = f"%{search}%"
-        query = query.filter(or_(Book.title.ilike(search_aux), Book.authors.any(Author.name.ilike(search_aux))))
+        stmt =  stmt.where(
+            or_(
+                Book.title.ilike(search_aux), 
+                Book.authors.any(Author.name.ilike(search_aux))
+            )
+        )
 
     if genre_id:
-        query = query.filter(Book.genres.any(Genre.id == genre_id))
+        stmt = stmt.where(Book.genres.any(Genre.id == genre_id))
 
+    subq = stmt.subquery()
 
-    total = query.count()
+    books_basic_metrics = select(
+        func.count(),
+        func.coalesce(func.sum(subq.columns.num_pages),0)
+    )
+
+    total, total_pages_read = db.execute(books_basic_metrics).first()
 
     if(total < 1): return {"reviews": [], "total": 0,  "total_pages_read": total_pages_read,  "limit": limit, "pages": 0, }
 
-    query = apply_book_order(query, order_by)
+    stmt = apply_book_order(stmt, order_by)
 
-    items = (
-        query
+    stmt = (
+        stmt
         .options(
             contains_eager(Review.book).selectinload(Book.authors),
             contains_eager(Review.book).selectinload(Book.genres)
         )
         .offset(offset)
         .limit(limit)
-        .all()
     )
 
+    items = db.scalars(stmt).all()
     pages = math.ceil(total/limit)
 
 
@@ -150,7 +167,9 @@ def get_my_metrics_books(
 def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
     aux_author = []
     for name in author_names:
-        author = db.query(Author).filter(Author.name == name).first()
+        stmt = select(Author).where(Author.name == name)
+        author = db.scalars(stmt).first()
+
         if not author:
             author = Author(name=name)
             db.add(author)
@@ -159,7 +178,7 @@ def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
     return aux_author
 
 def get_top_genres(db:Session, base_filters: list):
-    stm = (
+    stmt = (
         select(
             Genre.name.label("name"),
             func.count(Review.id).label("books")
@@ -173,14 +192,14 @@ def get_top_genres(db:Session, base_filters: list):
     )
      
 
-    top_genres_query = db.execute(stm).mappings().all()
+    top_genres_query = db.execute(stmt).mappings().all()
     return top_genres_query
 
      
 
 def get_top_authors(db:Session, base_filters: list):
 
-    stm = (
+    stmt = (
         select(
             Author.name.label("name"),
             func.count(Review.id).label("total_books"),
@@ -193,7 +212,7 @@ def get_top_authors(db:Session, base_filters: list):
     .order_by(desc("total_books"))
     .limit(10))
 
-    top_authors = db.execute(stm).mappings().all()
+    top_authors = db.execute(stmt).mappings().all()
 
     return top_authors
 
