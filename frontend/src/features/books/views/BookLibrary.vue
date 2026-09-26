@@ -4,15 +4,19 @@ import Screen from "../../../components/Screen.vue";
 import Select from "../../../components/Select.vue";
 import { ORDER_BY_VALUES } from "../consts/booksConsts.js";
 import { apiBooks } from "../services/apiBook.js";
-import { computed, ref } from "vue";
+import { computed, ref, watch, watchEffect } from "vue";
 import BookCard from "../components/BookCard.vue";
 import { useDebounce } from "../../../debounce/useDebounce.js";
 import { usePagination } from "../../../composables/usePagination.js";
 import Pagination from "../../../components/Pagination.vue";
 import ModalReviewBook from "../components/ModalReviewBook.vue";
 
-const searchBookInLibrary = ref();
+const searchBookInLibrary = ref("");
 const debounceSearch = useDebounce(searchBookInLibrary, 500);
+const filters = ref({
+  genreFilter: "",
+  order_by: "created_at",
+});
 const reviews = computed(() => catalogBooks.value?.reviews || []);
 const totalBooks = computed(() => catalogBooks.value?.total || 0);
 const totalPages = computed(() => catalogBooks.value?.pages || 0);
@@ -35,12 +39,18 @@ const {
   isFetching: isFetchingBooks,
   isLoading: isLoadingBooks,
 } = useQuery({
-  queryKey: ["catalogLibraryBooks", debounceSearch, page],
-  queryFn: apiBooks.getMyCatalogLibraryBooks,
+  queryKey: ["catalogLibraryBooks", debounceSearch, page, filters],
+  queryFn: () =>
+    apiBooks.getMyCatalogLibraryBooks({
+      page: page.value,
+      search: debounceSearch.value,
+      genre_id: filters.value.genreFilter,
+      order_by: filters.value.order_by,
+    }),
 });
 
 const genresValues = computed(() => {
-  return (
+  const apiGenres =
     genreData.value?.map((item) => {
       const formattedName =
         item.name.charAt(0).toUpperCase() + item.name.slice(1);
@@ -49,8 +59,9 @@ const genresValues = computed(() => {
         value: item.id,
         label: formattedName,
       };
-    }) || []
-  );
+    }) || [];
+
+  return [{ value: "", label: "Todos" }, ...apiGenres];
 });
 
 const openModal = () => {
@@ -76,11 +87,22 @@ const openReview = (review) => {
       </div>
       <div class="flex gap-2 items-center mt-2">
         <input
+          v-model="searchBookInLibrary"
           placeholder="Buscar por título o autor"
           class="h-10 flex-1 w-full border border-gray-300 dark:border-gray-400 focus:outline-gray-300 dark:focus:outline-gray-400 focus:outline-2 focus:outline-offset-2 p-2 rounded-md transition-all text-black dark:text-white dark:bg-gray-800"
         />
-        <Select :values="genresValues" labelSelect="" class="w-56 h-10" />
-        <Select :values="ORDER_BY_VALUES" labelSelect="" class="w-56 h-10" />
+        <Select
+          :values="genresValues"
+          labelSelect=""
+          v-model="filters.genreFilter"
+          class="w-56 h-10"
+        />
+        <Select
+          :values="ORDER_BY_VALUES"
+          labelSelect=""
+          v-model="filters.order_by"
+          class="w-56 h-10"
+        />
       </div>
     </header>
     <div v-if="isLoadingBooks" class="text-black dark:text-white mt-4 ml-2">
