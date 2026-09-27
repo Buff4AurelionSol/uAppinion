@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Depends, Query
 from sqlalchemy.orm import Session
 from backend.schemas.review import ReviewResponse, ReviewCreate
-from backend.services.review_service import create_review_with_book, get_my_library_books, get_my_metrics_books
+from backend.services.review_service import create_review_with_book, get_my_library_books, get_my_metrics_books, get_reading_year
 from backend.config.db import get_db
 from datetime import date
 from typing import Literal
@@ -45,4 +45,7 @@ def get_metrics_books(
     db:Session = Depends(get_db),
 ):
     return get_my_metrics_books(db= db, status=status, year=year, start_date=start_date, end_date=end_date)
-    
+
+@router.get("/books/metrics/years")
+def get_my_reading_year(db:Session = Depends(get_db)):
+    return get_reading_year(db)

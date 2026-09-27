@@ -6,7 +6,7 @@ from backend.services.genre_service import add_new_genre
 from sqlalchemy.orm import Session, contains_eager, Query
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, func, or_, desc, text
+from sqlalchemy import select, func, or_, desc, text, Integer
 from backend.const.consts import statusesValues
 from datetime import date
 
@@ -222,6 +222,24 @@ def get_top_authors(db:Session, base_filters: list):
     top_authors = db.execute(stmt).mappings().all()
 
     return top_authors
+
+def get_reading_year(db:Session):
+    stmt = (
+        select(
+            func.extract("year", Review.created_at)
+            .cast(Integer)
+            .label("years")
+        )
+        .distinct()
+        .order_by(desc(text("years")))
+        
+    )
+
+    year = db.execute(stmt).scalars().all()
+    
+    
+    return list(year)
+
 
 def apply_book_order(query: Query, order_by: str) -> Query: 
     match order_by:
