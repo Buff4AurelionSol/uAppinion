@@ -125,4 +125,47 @@ export const apiBooks = {
       throw e;
     }
   },
+  getMyYearsReaded: async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/books/metrics/years");
+      if (!response.ok) {
+        throw new Error("Error HTTP: ", response.status);
+      }
+
+      return await response.json();
+    } catch (e) {
+      console.error("Hubo un error al traer los años de lectura: ", e);
+    }
+  },
+  getMyMetrics: async ({
+    year = "",
+    status = "",
+    first_date = "",
+    end_date = "",
+  }) => {
+    try {
+      const params = new URLSearchParams();
+      if (year) params.append("year", year);
+      if (status) params.append("status", status);
+      if (first_date) params.append("first_date", first_date);
+      if (end_date) params.append("end_date", end_date);
+
+      const queryString = params.toString() ? `?${params.toString()}` : "";
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/books/metrics${queryString}`,
+      );
+      if (!response.ok) {
+        throw new Error("Error HTTP: ", response.status);
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      return data;
+    } catch (e) {
+      console.error("Hubo un error al traer los años de lectura: ", e);
+      throw e;
+    }
+  },
 };
