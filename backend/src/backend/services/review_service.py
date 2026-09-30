@@ -8,7 +8,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, or_, desc, text, Integer
 from backend.const.consts import statusesValues
-from datetime import date
+from sqlalchemy.sql.elements import ColumnElement
+from datetime import date, datetime
 
 import math
 
@@ -112,6 +113,7 @@ def get_my_library_books(
         "pages": pages
     }
 
+
 def get_my_metrics_books(
     db:Session, 
     status: str ="read",  
@@ -119,27 +121,46 @@ def get_my_metrics_books(
     start_date:date| None = None, 
     end_date: date| None = None
 ):
+    status_filter = None if status in ["Todos", ""] else status
     
     base_filter = build_status_filter_to_review(
-     status=status, 
+     status=status_filter, 
      year=year,
      start_date=start_date, 
      end_date=end_date
     )
 
-    group_by_month = True if year or (start_date and end_date and start_date.year == end_date.year) else False
-    time_format = "YYYY-MM" if group_by_month else "YYYY"
-    time_bucket = func.to_char(Review.finish_date, time_format)
+    target_date_column = get_date_column_by_status(status_filter)
+    global_filter = build_status_filter_to_review(status=status_filter)
+    global_min_date = db.execute(
+        select(func.min(target_date_column)).where(*global_filter)
+    ).scalar()
+
     
     overall_stmt = select(
         func.count(Review.id),
         func.sum(Review.num_pages),
-        func.avg(Review.num_pages)
+        func.avg(Review.num_pages),
+        func.max(target_date_column)
         ).where(*base_filter)
 
-    total_books_read, total_pages_read, average_pages_read = db.execute(overall_stmt).first()
+    (
+        total_books_read,
+        total_pages_read, 
+        average_pages_read,
+        max_date
+    ) = db.execute(overall_stmt).first()
 
+    total_time_read = calculate_total_year(
+        global_min_date=global_min_date,
+        max_date= max_date,
+        end_date=end_date
+    )
 
+    group_by_month = True if year or (start_date and end_date and start_date.year == end_date.year) else False
+    time_format = "YYYY-MM" if group_by_month else "YYYY"
+    time_bucket = func.to_char(Review.finish_date, time_format)
+        
     books_per_period_query = (
         select(
             time_bucket.label("period"), 
@@ -164,13 +185,13 @@ def get_my_metrics_books(
         "total_books_read": total_books_read or 0,
         "total_pages_read": total_pages_read or 0,
         "average_pages_read": round(float(average_pages_read), 2) if average_pages_read else 0,
+        "total_time_read": total_time_read,
         "books_per_period": books_per_period,
         "pages_per_period": pages_per_period,
         "top_genres": top_genres,
         "top_authors": top_authors
     }
     
-
 def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
     aux_author = []
     for name in author_names:
@@ -272,4 +293,35 @@ def build_status_filter_to_review(
         base_filters.append(Review.finish_date <= date(year,12,31))
 
     return base_filters
+
+def get_date_column_by_status(status: str | None) -> ColumnElement:
+    if status == "read":
+        return Review.finish_date
+    if status in ("reading", "dropped"):
+        return func.coalesce(Review.start_date, Review.created_at)
+    if status == "plan_to_read":
+        return Review.created_at
+    
+    return func.coalesce(Review.finish_date, Review.start_date, Review.created_at)
+    
+def calculate_total_year(
+    global_min_date: date | datetime | None = None, 
+    max_date: date | datetime | None = None,
+    end_date: date | datetime | None = None
+) -> str:
+
+    def to_date(d:date | datetime) -> date:
+        return d.date() if isinstance(d, datetime) else d
+
+    if not global_min_date:
+        return "0 años"
+
+    start_date = to_date(global_min_date)
+
+    real_end_date = to_date(end_date or max_date or date.today())
+    days = (real_end_date - start_date).days
+    years = int(days/365.25) if days > 0 else 0
+
+    return f"{years} {'año' if years == 1 else 'años'}"
+    
     
