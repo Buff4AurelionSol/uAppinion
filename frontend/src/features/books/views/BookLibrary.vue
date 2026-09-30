@@ -4,7 +4,7 @@ import Screen from "../../../components/Screen.vue";
 import Select from "../../../components/Select.vue";
 import { ORDER_BY_VALUES } from "../consts/booksConsts.js";
 import { apiBooks } from "../services/apiBook.js";
-import { computed, ref, watch, watchEffect } from "vue";
+import { computed, ref, watch } from "vue";
 import BookCard from "../components/BookCard.vue";
 import { useDebounce } from "../../../debounce/useDebounce.js";
 import { usePagination } from "../../../composables/usePagination.js";
@@ -72,6 +72,17 @@ const openReview = (review) => {
   openModal();
   reviewSelected.value = review;
 };
+
+watch(
+  [
+    debounceSearch,
+    () => filters.value.genreFilter,
+    () => filters.value.order_by,
+  ],
+  () => {
+    setPage(1);
+  },
+);
 </script>
 
 <template>
