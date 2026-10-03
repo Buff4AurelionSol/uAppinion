@@ -48,3 +48,18 @@ export const ORDER_BY_VALUES = [
   { value: "title_asc", label: "Título A-Z" },
   { value: "date", label: "Fecha" },
 ];
+
+export const MONTH_NAMES = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];

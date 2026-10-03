@@ -4,7 +4,9 @@ import Screen from "../../../components/Screen.vue";
 import Select from "../../../components/Select.vue";
 import { useQuery } from "@tanstack/vue-query";
 import { apiBooks } from "../services/apiBook.js";
-import { statusesValues } from "../consts/booksConsts.js";
+import { MONTH_NAMES, statusesValues } from "../consts/booksConsts.js";
+import { useTheme } from "../../../const/useTheme.js";
+import BarChart from "../../../components/BarChart.vue";
 
 const filters = ref({
   year: "Todos",
@@ -13,6 +15,17 @@ const filters = ref({
   end_date: "",
 });
 
+watch(
+  () => filters.value.year,
+  (newYear) => {
+    if (newYear !== "Periodo personalizado") {
+      filters.value.first_date = "";
+      filters.value.end_date = "";
+    }
+  },
+);
+
+const { theme } = useTheme();
 const cleanFiltersParams = computed(() => {
   const params = { status: filters.value.status };
 
@@ -53,6 +66,139 @@ const yearWithAll = computed(() => {
 
 const isCustomPeriod = computed(
   () => filters.value.year === "Periodo personalizado",
+);
+
+const isSingleYearSelected = computed(() => {
+  const { year, first_date, end_date } = filters.value;
+
+  if (year !== "Todos" && year !== "Periodo personalizado") {
+    return true;
+  }
+
+  if (year === "Periodo personalizado" && first_date && end_date) {
+    const auxFirstDate = first_date.slice(0, 4);
+    const auxEndDate = end_date.slice(0, 4);
+    return auxFirstDate === auxEndDate;
+  }
+
+  return false;
+});
+
+const subTitlePerPeriod = computed(() => {
+  if (
+    isCustomPeriod.value &&
+    filters.value.first_date &&
+    filters.value.end_date
+  ) {
+    return `${filters.value.first_date} al ${filters.value.end_date}`;
+  }
+  if (isSingleYearSelected.value) {
+    return filters.value.year;
+  }
+
+  return "Todos los años";
+});
+
+const formatPeriodData = (periodArray, keyValueData = "total") => {
+  const data = periodArray ?? [];
+
+  if (isSingleYearSelected.value) {
+    const monthData = new Array(12).fill(0);
+    data.forEach((item) => {
+      const monthIndex = parseInt(item?.period.slice(5, 7), 10);
+      if (monthIndex >= 1 && monthIndex <= 12) {
+        monthData[monthIndex - 1] = item[keyValueData] ?? 0;
+      }
+    });
+
+    return {
+      categories: MONTH_NAMES,
+      seriesData: monthData,
+    };
+  }
+
+  const categories = data.map((item) => item.period);
+  const seriesData = data.map((item) => item[keyValueData] ?? 0);
+  return { categories, seriesData };
+};
+
+const getBaseChartOptions = (categories) => {
+  const textColor = theme.value === "dark" ? "#d1d5dc" : "#364153";
+
+  return {
+    chart: {
+      type: "bar",
+      toolbar: {
+        show: false,
+      },
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        horizontal: false,
+      },
+    },
+    xaxis: {
+      categories,
+      labels: {
+        style: {
+          colors: textColor,
+        },
+      },
+    },
+    yaxis: {
+      decimalsInFloat: 0,
+      labels: {
+        formatter: (value) => Math.floor(value),
+        style: {
+          colors: textColor,
+        },
+      },
+    },
+    grid: {
+      show: false,
+    },
+  };
+};
+
+//LIBROS POR PERIODO
+const processedBooksCharData = computed(() =>
+  formatPeriodData(metricsData.value?.books_per_period, "total"),
+);
+
+const titlesBookPerPeriod = computed(() =>
+  isSingleYearSelected.value ? "Libros por mes" : "Libros por año",
+);
+
+const bookChartSeries = computed(() => [
+  {
+    name: filters.value.status === "read" ? "Libros Leidos" : "Libros",
+    data: processedBooksCharData.value.seriesData,
+  },
+]);
+
+const bookChartOptions = computed(() =>
+  getBaseChartOptions(processedBooksCharData.value.categories),
+);
+
+//PÁGINAS POR PERIODO
+const processedPagesCharData = computed(() =>
+  formatPeriodData(metricsData.value?.pages_per_period, "total_pages"),
+);
+
+const titlesPagesPerPeriod = computed(() =>
+  isSingleYearSelected.value ? "Páginas por mes" : "Páginas por año",
+);
+
+const pagesChartSeries = computed(() => [
+  {
+    name: filters.value.status === "read" ? "Paginas Leidos" : "Páginas",
+    data: processedPagesCharData.value.seriesData,
+  },
+]);
+
+const pagesChartOptions = computed(() =>
+  getBaseChartOptions(processedPagesCharData.value.categories),
 );
 </script>
 
@@ -120,52 +266,72 @@ const isCustomPeriod = computed(
             />
           </div>
         </section>
-        <section class="flex w-full gap-4 items-center">
-          <article class="w-1/4">
-            <div
-              class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
-            >
-              <p class="text-2xl font-bold text-black dark:text-white">
-                {{ metricsData?.total_books_read }}
-              </p>
-              <p class="text-sm text-gray-500 dark:text-gray-300">Libros</p>
-            </div>
-          </article>
-          <article class="w-1/4">
-            <div
-              class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
-            >
-              <p class="text-2xl font-bold text-black dark:text-white">
-                {{ metricsData?.total_pages_read }}
-              </p>
-              <p class="text-sm text-gray-500 dark:text-gray-300">Páginas</p>
-            </div>
-          </article>
-          <article class="w-1/4">
-            <div
-              class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
-            >
-              <p class="text-2xl font-bold text-black dark:text-white">
-                {{ metricsData?.average_pages_read }}
-              </p>
-              <p class="text-sm text-gray-500 dark:text-gray-300">
-                Promedio de páginas
-              </p>
-            </div>
-          </article>
-          <article class="w-1/4">
-            <div
-              class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
-            >
-              <p class="text-2xl font-bold text-black dark:text-white">
-                {{ metricsData?.total_time_read }}
-              </p>
-              <p class="text-sm text-gray-500 dark:text-gray-300">
-                Años de lectura
-              </p>
-            </div>
-          </article>
+        <section class="flex w-full gap-2 items-center">
+          <div class="w-full flex flex-col md:flex-row gap-2">
+            <article class="w-full">
+              <div
+                class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
+              >
+                <p class="text-2xl font-bold text-black dark:text-white">
+                  {{ metricsData?.total_books_read }}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-300">Libros</p>
+              </div>
+            </article>
+            <article class="w-full">
+              <div
+                class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
+              >
+                <p class="text-2xl font-bold text-black dark:text-white">
+                  {{ metricsData?.total_pages_read }}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-300">Páginas</p>
+              </div>
+            </article>
+          </div>
+          <div class="w-full flex flex-col md:flex-row gap-2">
+            <article class="w-full">
+              <div
+                class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
+              >
+                <p class="text-2xl font-bold text-black dark:text-white">
+                  {{ metricsData?.average_pages_read }}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-300">
+                  Promedio de páginas
+                </p>
+              </div>
+            </article>
+            <article class="w-full">
+              <div
+                class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
+              >
+                <p class="text-2xl font-bold text-black dark:text-white">
+                  {{ metricsData?.total_time_read }}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-300">
+                  Años de lectura
+                </p>
+              </div>
+            </article>
+          </div>
         </section>
+        <div class="flex gap-4 flex-col md:flex-row">
+          <BarChart
+            :mainTitle="titlesBookPerPeriod"
+            :subTitle="subTitlePerPeriod"
+            :series="bookChartSeries"
+            :options="bookChartOptions"
+            :isLoading="isLoadingMetrics"
+          />
+          <BarChart
+            :mainTitle="titlesPagesPerPeriod"
+            :subTitle="subTitlePerPeriod"
+            :series="pagesChartSeries"
+            :options="pagesChartOptions"
+            :isLoading="isLoadingMetrics"
+          />
+        </div>
       </div>
     </div>
   </Screen>
