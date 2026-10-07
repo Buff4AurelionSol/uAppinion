@@ -7,6 +7,7 @@ import { apiBooks } from "../services/apiBook.js";
 import { MONTH_NAMES, statusesValues } from "../consts/booksConsts.js";
 import { useTheme } from "../../../const/useTheme.js";
 import BarChart from "../../../components/BarChart.vue";
+import TopComponent from "../../../components/TopComponent.vue";
 
 const filters = ref({
   year: "Todos",
@@ -200,6 +201,9 @@ const pagesChartSeries = computed(() => [
 const pagesChartOptions = computed(() =>
   getBaseChartOptions(processedPagesCharData.value.categories),
 );
+
+const topAuthors = computed(() => metricsData.value?.top_authors ?? []);
+const topGenres = computed(() => metricsData.value?.top_genres ?? []);
 </script>
 
 <template>
@@ -331,6 +335,44 @@ const pagesChartOptions = computed(() =>
             :options="pagesChartOptions"
             :isLoading="isLoadingMetrics"
           />
+        </div>
+        <div class="flex gap-4 flex-col md:flex-row">
+          <TopComponent
+            title="Autores más leídos"
+            :subTitle="subTitlePerPeriod"
+            :topData="topAuthors"
+            valueKey="total_books"
+          >
+            <template #valuesTop="{ item }">
+              <span
+                class="font-bold text-sm text-gray-800 dark:text-gray-100"
+                >{{ item?.name }}</span
+              >
+              <span class="text-xs text-gray-500 dark:text-gray-300">
+                {{ item?.total_books }}
+                {{ Number(item?.total_books) > 1 ? "libros" : "libro" }} .
+                {{ item?.total_pages }}
+                {{ Number(item?.total_pages) === 1 ? "página" : "páginas" }}
+              </span>
+            </template>
+          </TopComponent>
+          <TopComponent
+            title="Géneros más leídos"
+            :subTitle="subTitlePerPeriod"
+            :topData="topGenres"
+            valueKey="books"
+          >
+            <template #valuesTop="{ item }">
+              <span
+                class="capitalize font-bold text-sm text-gray-800 dark:text-gray-100"
+                >{{ item?.name }}</span
+              >
+              <span class="text-xs text-gray-500 dark:text-gray-300">
+                {{ item?.books }}
+                {{ Number(item?.books) > 1 ? "libros" : "libro" }} .
+              </span>
+            </template>
+          </TopComponent>
         </div>
       </div>
     </div>
