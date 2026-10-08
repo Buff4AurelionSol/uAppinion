@@ -1,16 +1,21 @@
 from fastapi import FastAPI
 from backend.endpoints.api import central_router
-from sqlalchemy import text
 from fastapi import Depends, FastAPI
-from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
 
-from backend.models.review import Review
-from backend.models.book import Book
+
 
 from backend.config.db import get_db, Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
+
+app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:5173", 
@@ -28,7 +33,6 @@ app.add_middleware(
 
 app.include_router(central_router)
 
-Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def read_root():
