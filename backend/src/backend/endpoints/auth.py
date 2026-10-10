@@ -1,0 +1,30 @@
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.config.db import get_db
+from backend.schemas.auth import AuthenticationRequest, TokenResponse
+from backend.schemas.refresh_tokens import LogoutRequest
+from backend.schemas.user import ResponseUser
+from backend.services.auth import login, logout, get_current_user
+
+router = APIRouter()
+
+@router.post("/login", response_model=TokenResponse)
+async def login_user(
+    authData: AuthenticationRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    return await login(db, authData)
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout_user(
+    data: LogoutRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    return await logout(db, data.refresh_token)
+
+
+@router.get("/me", response_model=ResponseUser)
+async def read_current_user(
+    current_user: ResponseUser = Depends(get_current_user)
+):
+    return current_user
