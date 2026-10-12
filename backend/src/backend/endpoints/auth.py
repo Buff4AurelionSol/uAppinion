@@ -5,6 +5,7 @@ from backend.schemas.auth import AuthenticationRequest, TokenResponse
 from backend.schemas.refresh_tokens import LogoutRequest
 from backend.schemas.user import ResponseUser
 from backend.services.auth import login, logout, get_current_user
+from backend.services.refresh_tokens_service import renew_refresh_token
 
 router = APIRouter()
 
@@ -22,6 +23,13 @@ async def logout_user(
 ):
     return await logout(db, data.refresh_token)
 
+@router.post("")
+async def get_a_renew_refresh_token(
+    plan_refresh_token: str,
+    db: AsyncSession = Depends(get_db), 
+    
+):
+    return await renew_refresh_token(db, plan_refresh_token)
 
 @router.get("/me", response_model=ResponseUser)
 async def read_current_user(
