@@ -4,5 +4,13 @@ import App from "./App.vue";
 import router from "./router/index.js";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import VueApexCharts from "vue3-apexcharts";
+import { createPinia } from "pinia";
 
-createApp(App).use(router).use(VueQueryPlugin).use(VueApexCharts).mount("#app");
+const pinia = createPinia();
+
+createApp(App)
+  .use(router)
+  .use(VueQueryPlugin)
+  .use(VueApexCharts)
+  .use(pinia)
+  .mount("#app");
