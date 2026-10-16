@@ -6,7 +6,7 @@ from backend.models.user import User
 from backend.services.user_service import get_user
 from backend.core.security import hash_token, generate_refresh_token, create_access_token
 from sqlalchemy import select, update
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Response
 from datetime import datetime, timezone, timedelta
 from backend.core.config import settings
 
@@ -54,7 +54,7 @@ async def revoke_all_user_tokens(db:AsyncSession, user_id: str) -> None:
     await db.execute(stmt)
     await db.commit()
 
-async def renew_refresh_token(db: AsyncSession, plain_refresh_token: str):
+async def renew_refresh_token(db: AsyncSession, plain_refresh_token: str, response: Response):
     token_hash = hash_token(plain_refresh_token)
     stmt = select(RefreshToken).where(RefreshToken.token_hash == token_hash)
     existRefreshToken = await db.scalar(stmt)
@@ -89,6 +89,7 @@ async def renew_refresh_token(db: AsyncSession, plain_refresh_token: str):
     new_access_token = create_access_token({"sub": str(user.id)})
     new_plain_refresh_token = generate_refresh_token()
     refresh_token_hashed = hash_token(new_plain_refresh_token)
+    expires_refresh_token_seconds = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
     new_refresh_token_dto = RefreshToken(
         token_hash=refresh_token_hashed,
@@ -96,11 +97,23 @@ async def renew_refresh_token(db: AsyncSession, plain_refresh_token: str):
         expires_at= datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
+
+
     db.add(new_refresh_token_dto)
     await db.commit()
 
+    response.set_cookie(
+        key="refresh_token",
+        value=new_plain_refresh_token,
+        httponly=True,
+        samesite="lax",
+        #El valor de secure debe estar el True en producción.
+        secure=False,
+        max_age=expires_refresh_token_seconds,
+        path="/"
+    )
+
     return TokenResponse(
         access_token=new_access_token,
-        refresh_token=new_plain_refresh_token,
         token_type="bearer"
     )
