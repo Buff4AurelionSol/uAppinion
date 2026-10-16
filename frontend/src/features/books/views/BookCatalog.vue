@@ -79,7 +79,7 @@ watch(isOpenModal, (isOpen) => {
 </script>
 
 <template>
-  <Screen class="dark:bg-black/90">
+  <div class="dark:bg-black/90 w-full flex-1">
     <section>
       <input
         placeholder="El señor de los anillos..."
@@ -131,5 +131,5 @@ watch(isOpenModal, (isOpen) => {
       :authors="bookSelected?.author_name"
       v-model="isOpenModal"
     />
-  </Screen>
+  </div>
 </template>

@@ -207,7 +207,7 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
 </script>
 
 <template>
-  <Screen class="dark:bg-black/90 bg-gray-100">
+  <div class="dark:bg-black/90 bg-gray-100 w-full flex-1">
     <div class="flex flex-col">
       <header class="p-4">
         <h2 class="text-3xl font-semibold text-gray-800 dark:text-gray-100">
@@ -376,5 +376,5 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
         </div>
       </div>
     </div>
-  </Screen>
+  </div>
 </template>

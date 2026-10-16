@@ -86,7 +86,7 @@ watch(
 </script>
 
 <template>
-  <Screen class="dark:bg-black/90">
+  <div class="dark:bg-black/90 w-full flex-1">
     <header class="p-4">
       <h2 class="text-3xl font-bold dark:text-white">Mi biblioteca</h2>
       <div
@@ -147,5 +147,5 @@ watch(
       />
     </section>
     <ModalReviewBook :review="reviewSelected" v-model="isOpenModal" />
-  </Screen>
+  </div>
 </template>

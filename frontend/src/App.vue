@@ -1,11 +1,7 @@
 <script setup>
-import Header from "./components/Header.vue";
-import Screen from "./components/Screen.vue";
+import MainLayout from "./features/MainLayout.vue";
 </script>
 
 <template>
-  <Screen>
-    <Header />
-    <RouterView />
-  </Screen>
+  <MainLayout />
 </template>
