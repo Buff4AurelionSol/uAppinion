@@ -7,7 +7,7 @@ from backend.services.refresh_tokens_service import create_refresh_token, get_re
 from backend.core.security import verify_hash_password, create_access_token, generate_refresh_token, hash_token, decode_access_token
 from backend.core.config import settings
 from backend.models.user import User
-from fastapi import HTTPException, status, Depends, Response
+from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from backend.config.db import get_db
@@ -30,7 +30,6 @@ async def authenticate_user(db: AsyncSession, authData: AuthenticationRequest) -
 async def login(
         db: AsyncSession, 
         authData: AuthenticationRequest,
-        response: Response,
         user_agent: str | None = None
 ) -> TokenResponse: 
     user = await authenticate_user(db, authData)
@@ -44,9 +43,6 @@ async def login(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
 
-    #Dias a Minutos a Horas y luego segundos
-    expires_refresh_token_seconds = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-
     token_dto = CreateRefreshTokens(
         token_hash=token_hash,
         user_id=str(user.id),
@@ -55,22 +51,11 @@ async def login(
     )
 
     await create_refresh_token(db, token_dto)
-
-    response.set_cookie(
-        key="refresh_token",
-        value=raw_refresh_token,
-        httponly=True,
-        samesite="lax",
-        #El valor de secure debe estar el True en producción.
-        secure=False,
-        max_age=expires_refresh_token_seconds,
-        path="/"
-    )
     
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer"
-    )
+    return {
+        "access_token": access_token,
+        "refresh_token": raw_refresh_token
+    }
 
 
 
