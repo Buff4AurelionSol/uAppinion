@@ -8,8 +8,16 @@ import AnimeMetrics from "../features/anime/views/AnimeMetrics.vue";
 import MoviesCatalog from "../features/movies/views/MoviesCatalog.vue";
 import AnimeCatalog from "../features/anime/views/AnimeCatalog.vue";
 import BookCatalog from "../features/books/views/BookCatalog.vue";
+import LoginView from "../features/login/views/LoginView.vue";
+import { useAuth } from "../stores/auth.js";
 
 const routes = [
+  {
+    path: "/login",
+    name: "Login",
+    component: LoginView,
+    meta: { guestOnly: true },
+  },
   {
     path: "/books/catalog",
     name: "Books Catalog",
@@ -19,11 +27,13 @@ const routes = [
     path: "/books/library",
     name: "Books Library",
     component: BookLibrary,
+    meta: { requiresAuth: true },
   },
   {
     path: "/books/metrics",
     name: "Books Metrics",
     component: BookMetrics,
+    meta: { requiresAuth: true },
   },
   {
     path: "/movies/catalog",
@@ -34,14 +44,16 @@ const routes = [
     path: "/movies/library",
     name: "Movies Library",
     component: MoviesLibrary,
+    meta: { requiresAuth: true },
   },
   {
     path: "/movies/metrics",
     name: "Movies Metrics",
     component: MoviesMetrics,
+    meta: { requiresAuth: true },
   },
   {
-    path: "/animes/library",
+    path: "/animes/catalog",
     name: "Animes Catalog",
     component: AnimeCatalog,
   },
@@ -49,17 +61,31 @@ const routes = [
     path: "/animes/library",
     name: "Animes Library",
     component: AnimeLibrary,
+    meta: { requiresAuth: true },
   },
   {
     path: "/animes/metrics",
     name: "Animes Metrics",
     component: AnimeMetrics,
+    meta: { requiresAuth: true },
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+router.beforeEach((to, from) => {
+  const authStore = useAuth();
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return { name: "Login" };
+  }
+
+  if (to.meta.guestOnly && authStore.isAuthenticated) {
+    return { name: "Books Catalog" };
+  }
 });
 
 export default router;
