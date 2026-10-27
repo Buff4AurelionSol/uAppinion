@@ -9,49 +9,21 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, or_, desc, text, Integer
 from backend.const.consts import statusesValues
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, datetime
-
 import math
 
 
-def create_review_with_book(review_in: ReviewCreate, db: Session) -> Review:
-    try:
-        db_book = db.query(Book).filter(Book.key == review_in.book.key).first()
+async def create_review(reviewData: ReviewCreate, user_id: str, db: AsyncSession):
+    newReview = Review(
+        id=reviewData.id,
+        user_id=user_id,
+        book_id=reviewData.book_id,
+        text_review=reviewData.text_review
+    )
 
-        if not db_book:
-            book_data = review_in.book.model_dump(exclude={"genres", "authors"})
-            db_book = Book(**book_data)
-            db.add(db_book)
-            db.flush()
-
-            if(hasattr(review_in.book, "genres") and review_in.book.genres):
-                genre_object = add_new_genre(db, review_in.book.genres)
-                db_book.genres = genre_object
-
-            if(hasattr(review_in.book, "authors") and review_in.book.authors):
-                db_book.authors = get_or_create_author(db, review_in.book.authors)
-
-        review_data = review_in.model_dump(exclude={"book"})
-        new_review = Review(**review_data, book_id=db_book.key)
-
-        db.add(new_review)
-        db.commit()
-        db.refresh(new_review)
-        return new_review
-       
-    except IntegrityError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-          detail=f"Error de base de datos: {e.orig}"
-        )
-
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ocurrió un error inesperado: {str(e)}"
-        )
+    db.add(newReview)
+    return newReview
 
 def get_my_library_books(
     db:Session, 
@@ -191,19 +163,6 @@ def get_my_metrics_books(
         "top_genres": top_genres,
         "top_authors": top_authors
     }
-    
-def get_or_create_author(db:Session,author_names:list[str]) -> list[Author]:
-    aux_author = []
-    for name in author_names:
-        stmt = select(Author).where(Author.name == name)
-        author = db.scalars(stmt).first()
-
-        if not author:
-            author = Author(name=name)
-            db.add(author)
-            db.flush()
-        aux_author.append(author)
-    return aux_author
 
 def get_top_genres(db:Session, base_filters: list):
     stmt = (
