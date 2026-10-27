@@ -8,8 +8,6 @@ class BookBase(BaseModel):
     first_publish_year: int | None = None
     cover_i: int | None  = None
  
-
-
 class BookCreate(BookBase):
     genres: list[str] = []
     authors: list[str] = []
