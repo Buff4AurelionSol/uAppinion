@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.schemas.book import BookCreate
 from backend.models.book import Book
@@ -11,19 +12,31 @@ async def get_or_create_book(book_data: BookCreate, db: AsyncSession):
     stmt = select(Book).where(Book.key == book_data.key)
     book = await db.scalar(stmt)
 
-    if not book:
-        book_dict = book_data.model_dump(exclude={"genres", "authors"})
-        book = Book(**book_dict)
-        db.add(book)
-        await db.flush()
+    if book:
+        return book
 
-        if book_data.genres:
-            genre_objects = await add_new_genre(db, book_data.genres)
-            book.genres = genre_objects
+    genre_objects = []
 
-        if book_data.authors:
-            author_objects = await get_or_create_author(db, book_data.authors)
-            book.authors = author_objects
+    if book_data.genres:
+        genre_objects = await add_new_genre(db, book_data.genres)
+
+    author_objects = []
+    
+    if book_data.authors:
+        author_objects = await get_or_create_author(db, book_data.authors)
+
+
+    book_dict = book_data.model_dump(exclude={"genres", "authors"})
+    book = Book(
+        **book_dict, 
+        genres=genre_objects, 
+        authors=author_objects
+    )
+    
+    db.add(book)
+    await db.flush()
+
+        
             
     return book
 
