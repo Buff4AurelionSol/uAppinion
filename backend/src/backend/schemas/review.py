@@ -4,7 +4,7 @@ from backend.schemas.book import BookCreate, BookResponse
 
 class ReviewCreate(BaseModel):
     id: str
-    book_id: str
+    user_book_id: str | None = None
     text_review: str | None = None
 
 
