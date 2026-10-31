@@ -40,7 +40,7 @@ export const INITIAL_REVIEW_FORM = {
   finish_date: "",
   num_pages: "",
   text_review: "",
-  is_read: false,
+  is_reread: false,
 };
 
 export const ORDER_BY_VALUES = [
