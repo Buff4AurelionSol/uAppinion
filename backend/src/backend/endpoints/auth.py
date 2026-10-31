@@ -17,7 +17,7 @@ async def login_user(
 ):
     auth_result = await login(db, authData)
     #Dias a Minutos a Horas y luego segundos
-    expires_refresh_token_seconds = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    expires_refresh_token_seconds = int(settings.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60
     
     response.set_cookie(
         key="refresh_token",
@@ -56,18 +56,18 @@ async def logout_user(
 @router.post("/refresh", response_model=TokenResponse)
 async def get_a_renew_refresh_token(
     response: Response,
-    plain_refresh_token: str = Cookie(None),
+    refresh_token: str = Cookie(None),
     db: AsyncSession = Depends(get_db), 
     
 ):
-     if not plain_refresh_token:
+     if not refresh_token:
          raise HTTPException(
              status_code=status.HTTP_401_UNAUTHORIZED,
              detail="No se encontró el token actualizado"
          )
      
-     auth_result = await renew_refresh_token(db, plain_refresh_token)
-     expires_refresh_token_seconds = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+     auth_result = await renew_refresh_token(db, refresh_token)
+     expires_refresh_token_seconds = int(settings.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60
      response.set_cookie(
         key="refresh_token",
         value=auth_result["refresh_token"],
