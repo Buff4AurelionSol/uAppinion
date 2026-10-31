@@ -7,18 +7,22 @@ class UserBookCreate(BaseModel):
     id: str
     book_id: str
     status: str
+    format: str | None = None
     num_pages: int | None = None
     start_date: date | None = None
     finish_date: date | None = None
+    is_reread: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
 class UserBookWithReview(BaseModel):
     id: str
     status: str
+    format: str | None = None
     num_pages: int | None = None
     start_date: date | None = None
     finish_date: date | None = None
+    is_reread: bool = False
 
     book: BookCreate
     review: ReviewCreate | None = None
@@ -28,6 +32,7 @@ class UserBookWithReview(BaseModel):
 
 class UserBookUpdate(BaseModel):
     status: str | None = None
+    format: str | None = None
     num_pages: int | None = None
     start_date: date | None = None
     finish_date: date | None = None 
