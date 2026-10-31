@@ -18,10 +18,12 @@ async def create_user_book(
         id=userBookData.id,
         user_id=user_id,
         book_id= userBookData.book_id,
+        format=userBookData.format,
         status= userBookData.status,
         num_pages=userBookData.num_pages,
         start_date=userBookData.start_date,
         finish_date=userBookData.finish_date,
+        is_reread=userBookData.is_reread
     )
 
     db.add(new_user_book)
@@ -36,20 +38,31 @@ async def create_user_book_with_review(
     try:
         book = await get_or_create_book(userBookData.book, db)
 
+        existing_read_stmt = select(UserBook).where(
+            UserBook.user_id == user_id,
+            UserBook.book_id == book.key
+        )
+
+        existings_read = await db.scalars(existing_read_stmt)
+        has_previous_reads = existings_read.first() is not None
+        is_read_value = True if has_previous_reads else userBookData.is_reread
+
         userBookPayload = UserBookCreate(
             id=userBookData.id,
             book_id=book.key,
             status=userBookData.status,
+            format=userBookData.format,
             num_pages=userBookData.num_pages,
             start_date=userBookData.start_date,
-            finish_date=userBookData.finish_date
+            finish_date=userBookData.finish_date,
+            is_reread=is_read_value
         )
 
         user_book = await create_user_book(userBookPayload, user_id, db)
 
         if userBookData.review and userBookData.review.text_review and userBookData.review.text_review.strip():
-            userBookData.review.book_id = book.key
-            await create_review(userBookData.review, user_id, db)
+            userBookData.review.user_book_id = user_book.id
+            await create_review(userBookData.review, db)
 
         await db.commit()
         await db.refresh(user_book)
