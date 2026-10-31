@@ -1,4 +1,5 @@
 <script setup>
+import { api } from "../../../api/axios.js";
 import { apiBooks } from "../services/apiBook.js";
 import Modal from "../../../components/Modal.vue";
 import Select from "../../../components/Select.vue";
@@ -34,11 +35,11 @@ const buildReviewPayload = (formData, bookProps) => {
   return {
     id: crypto.randomUUID(),
     status: formData.status,
+    format: formData.format,
     num_pages: Number(formData.num_pages),
     start_date: formData.start_date ? formData.start_date : null,
     finish_date: formData.finish_date ? formData.finish_date : null,
-    is_read: formData.is_read,
-    text_review: formData.text_review,
+    is_reread: formData.is_reread,
     book: {
       key: bookProps.bookKey,
       title: bookProps.title,
@@ -46,6 +47,10 @@ const buildReviewPayload = (formData, bookProps) => {
       cover_i: bookProps.cover_i,
       genres: genresBook.value,
       authors: bookProps.authors,
+    },
+    review: {
+      id: crypto.randomUUID(),
+      text_review: formData.text_review,
     },
   };
 };
@@ -63,24 +68,10 @@ const sendBookReview = async () => {
   const dataToSend = buildReviewPayload(formBookReview.value, props);
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/books/catalog", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(dataToSend),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Detalle del error del backend:", errorData);
-      throw new Error(`Error del servidor: ${response.status}`);
-    }
-
-    const result = await response.json();
+    await api.post("/books/catalog", dataToSend);
     formBookReview.value = { ...INITIAL_REVIEW_FORM };
   } catch (e) {
-    console.error("Error en la petición:", e);
+    console.error("Error en la petición:", e.response?.data || error.message);
   }
 };
 
@@ -167,7 +158,7 @@ watch(isOpenModal, (isOpen) => {
           <input
             type="checkbox"
             class="w-4 h-4"
-            v-model="formBookReview.is_read"
+            v-model="formBookReview.is_reread"
           />
           <span class="text-black dark:text-white text-sm">¿Es relectura?</span>
         </label>
