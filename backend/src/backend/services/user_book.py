@@ -104,5 +104,38 @@ async def update_user_book(
     await db.commit()
     await db.refresh(user_book)
     return user_book
+
+
+async def delete_user_book(
+        user_id: str,
+        user_book_id: str,
+        db: AsyncSession
+):
+        try: 
+            stmt = select(UserBook).where(
+                UserBook.id == user_book_id,
+                UserBook.user_id == user_id
+            )
+        
+            user_book = await db.scalar(stmt)
+        
+            if not user_book: 
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No se encontró el libro en su biblioteca"
+                )
     
-    
+            await db.delete(user_book)
+            await db.commit()
+
+            return {"message": "Libro eliminado de la biblioteca"}
+        
+        except HTTPException as e:
+            raise e
+
+        except Exception as e: 
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ocurrió un error al intentar eliminar el registro"
+            )

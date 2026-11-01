@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config.db import get_db
 from backend.schemas.user_book import UserBookWithReview, UserBookUpdate
 from backend.services.auth import get_current_user
-from backend.services.user_book import create_user_book_with_review, update_user_book
+from backend.services.user_book import create_user_book_with_review, update_user_book, delete_user_book
 
 router = APIRouter()
 
@@ -32,8 +32,15 @@ async def create_user_book_and_review(
 async def update_userBook(
     user_book_id: str,
     payload: UserBookUpdate,
-     current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ): 
     return await update_user_book(current_user.id, user_book_id, payload, db)
-    
+
+@router.delete("/books/library/{user_book_id}")
+async def delete_userBook(
+    user_book_id: str,
+    current_user: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    return await delete_user_book(current_user.id, user_book_id, db)
