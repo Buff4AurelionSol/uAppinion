@@ -1,5 +1,7 @@
 // src/features/books/services/apiBooks.js
 
+import { api } from "../../../api/axios";
+
 const BASE_URL = "https://openlibrary.org";
 
 export const apiBooks = {
@@ -84,9 +86,8 @@ export const apiBooks = {
 
   getAllMyGenres: async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/genres");
-      const data = await response.json();
-      return data || [];
+      const { data } = await api.get("http://127.0.0.1:8000/genres");
+      return data;
     } catch (e) {
       console.error("Hubo un error al traer los géneros de los libros");
     }
@@ -100,24 +101,20 @@ export const apiBooks = {
     order_by = "",
   }) => {
     try {
-      const params = new URLSearchParams({
+      const params = {
         page,
         limit,
+      };
+
+      if (search) params.search = search;
+      if (genre_id) params.genre_id = genre_id;
+      if (order_by) params.order_by = order_by;
+
+      const { data } = await api.get(`http://127.0.0.1:8000/books/library`, {
+        params,
       });
 
-      if (search) params.append("search", search);
-      if (genre_id) params.append("genre_id", genre_id);
-      if (order_by) params.append("order_by", order_by);
-
-      const response = await fetch(
-        `http://127.0.0.1:8000/books/library?${params.toString()}`,
-      );
-
-      if (!response.ok) {
-        throw new Error("Error HTTP: ", response.status);
-      }
-
-      return await response.json();
+      return data;
     } catch (e) {
       console.error(
         "Hubo un error al traer el catalogo de mi libreria de libros.",

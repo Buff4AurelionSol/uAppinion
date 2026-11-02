@@ -17,11 +17,11 @@ const filters = ref({
   genreFilter: "",
   order_by: "created_at",
 });
-const reviews = computed(() => catalogBooks.value?.reviews || []);
+const reviews = computed(() => catalogBooks.value?.library || []);
 const totalBooks = computed(() => catalogBooks.value?.total || 0);
 const totalPages = computed(() => catalogBooks.value?.pages || 0);
 const totalPagesRead = computed(
-  () => catalogBooks.value?.total_pages_read || 0,
+  () => catalogBooks.value?.total_pages_books || 0,
 );
 const reviewSelected = ref(null);
 const isOpenModal = ref(false);
