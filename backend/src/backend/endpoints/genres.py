@@ -6,6 +6,6 @@ from backend.services.genre_service import get_all_genres
 router = APIRouter()
 
 @router.get("/")
-def all_genres(db: Session = Depends(get_db)):
-    return get_all_genres(db)
+async def all_genres(db: Session = Depends(get_db)):
+    return await get_all_genres(db)
 
