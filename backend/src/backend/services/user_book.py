@@ -1,8 +1,11 @@
+import math
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_ 
+from sqlalchemy import select, or_, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
-from backend.models.book import Book
+from sqlalchemy.orm import joinedload
+from backend.models.book import Book, Genre
+from backend.models.author import Author
 from backend.models.user_book import UserBook
 from backend.schemas.user_book import UserBookCreate, UserBookWithReview, UserBookUpdate
 from backend.schemas.review import ReviewCreate
@@ -77,6 +80,88 @@ async def create_user_book_with_review(
         await db.rollback()
         print(f"ERROR : {type(e).__name__} -> {str(e)}")
         raise e
+
+async def get_my_library(
+        user_id: str, 
+        db: AsyncSession,
+        page: int = 1,
+        limit: int = 10,
+        search: str = None, 
+        genre_id: int = None, 
+        order_by: str = None
+):
+    stmt_library = (
+        select(UserBook).
+        join(Book).
+        options(joinedload(UserBook.book)).
+        where(UserBook.user_id == user_id)
+    )
+
+    offset = (page - 1) * limit
+
+    if search: 
+        search_aux = f"%{search}%"
+        stmt_library  = stmt_library.where(
+            or_(
+                Book.title.ilike(search_aux),
+                Book.authors.any(Author.name.ilike(search_aux))
+            )
+        )
+
+    if genre_id:
+        stmt_library = stmt_library.where(Book.genres.any(Genre.id == genre_id))
+
+    match order_by:
+        case "title_asc":
+             stmt_library = stmt_library.order_by(func.lower(Book.title).asc())
+
+        case "date":
+            stmt_library = stmt_library.order_by(Book.first_publish_year.desc())
+
+        case "created_at":
+            stmt_library = stmt_library.order_by(UserBook.created_at.desc())
+    
+    stmt  = stmt_library.offset(offset).limit(limit)
+    
+    subquery = stmt_library.subquery()
+    
+    books_basic_metrics = select(
+        func.count(),
+        func.coalesce(
+            func.sum(
+                case(
+                    (subquery.c.status == "read",subquery.columns.num_pages), 
+                    else_=0
+                    ), 
+                    
+            ), 
+            0
+        )
+    )
+
+    metrics_result = await db.execute(books_basic_metrics)
+    total, total_pages = metrics_result.first()
+
+    if total < 1: 
+        return {
+            "library": [], 
+            "total": 0, 
+            "total_pages_read": total_pages, 
+            "limit": limit, 
+            "pages": 0
+        }
+
+    items = await db.scalars(stmt)
+    library_items = items.all()
+    pages = math.ceil(total/limit)
+
+    return {
+        "library": library_items,
+        "total": total,
+        "total_pages_read": total_pages,
+        "limit": limit,
+        "pages": pages
+    }
 
 
 async def update_user_book(
