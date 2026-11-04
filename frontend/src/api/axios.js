@@ -2,7 +2,7 @@ import axios from "axios";
 import { useAuth } from "../stores/auth";
 
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: "http://localhost:8000",
   withCredentials: true,
 });
 
@@ -57,7 +57,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          "http://127.0.0.1:8000/auth/refresh",
+          "http://localhost:8000/auth/refresh",
           {},
           { withCredentials: true },
         );
