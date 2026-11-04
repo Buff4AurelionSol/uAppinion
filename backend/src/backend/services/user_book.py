@@ -1,6 +1,6 @@
 import math
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, func, case
+from sqlalchemy import select, or_, func 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -127,16 +127,7 @@ async def get_my_library(
     
     books_basic_metrics = select(
         func.count(),
-        func.coalesce(
-            func.sum(
-                case(
-                    (subquery.c.status == "read",subquery.columns.num_pages), 
-                    else_=0
-                    ), 
-                    
-            ), 
-            0
-        )
+        func.coalesce(func.sum(subquery.columns.num_pages), 0)
     )
 
     metrics_result = await db.execute(books_basic_metrics)
@@ -146,7 +137,7 @@ async def get_my_library(
         return {
             "library": [], 
             "total": 0, 
-            "total_pages_read": total_pages, 
+            "total_pages": total_pages, 
             "limit": limit, 
             "pages": 0
         }
@@ -158,7 +149,7 @@ async def get_my_library(
     return {
         "library": library_items,
         "total": total,
-        "total_pages_read": total_pages,
+        "total_pages_books": total_pages,
         "limit": limit,
         "pages": pages
     }
