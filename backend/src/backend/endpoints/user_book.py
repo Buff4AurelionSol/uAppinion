@@ -3,7 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config.db import get_db
 from backend.schemas.user_book import UserBookWithReview, UserBookUpdate
 from backend.services.auth import get_current_user
-from backend.services.user_book import create_user_book_with_review, update_user_book, delete_user_book, get_my_library
+from backend.services.user_book import create_user_book_with_review, update_user_book, delete_user_book, get_my_library, get_my_metrics
+from datetime import date
+from typing import Literal
+
+StatusType = Literal["read", "reading", "plan_to_read", "dropped"]
 
 router = APIRouter()
 
@@ -27,6 +31,17 @@ async def get_library_user(
         genre_id, 
         order_by, 
     )
+
+@router.get("/books/metrics")
+async def get_my_metrics_user(
+    current_user: str = Depends(get_current_user),
+    status: StatusType = Query("read", description="Estado de lectura del libro"),
+    year: int | None = Query(None, description="Año específico para filtrar"),
+    start_date: date | None = Query(None, description="Fecha de inicio (YYYY-MM-DD)"),
+    end_date: date | None = Query(None, description="Fecha fin (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_my_metrics(user_id=current_user.id, db= db, status=status, year=year, start_date=start_date, end_date=end_date)
 
 
 @router.post("/books/catalog", status_code=status.HTTP_201_CREATED)

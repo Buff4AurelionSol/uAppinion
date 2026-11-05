@@ -1,6 +1,6 @@
 import math
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, func 
+from sqlalchemy import select, or_, func, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -11,6 +11,9 @@ from backend.schemas.user_book import UserBookCreate, UserBookWithReview, UserBo
 from backend.schemas.review import ReviewCreate
 from backend.services.review_service import create_review
 from backend.services.book import get_or_create_book
+from backend.const.consts import statusesValues
+from datetime import date
+import asyncio
 
 async def create_user_book(
         userBookData: UserBookCreate, 
@@ -154,6 +157,125 @@ async def get_my_library(
         "pages": pages
     }
 
+async def get_my_metrics(
+        user_id: str, 
+        db: AsyncSession,
+        status: str = "read",
+        year: int = None, 
+        start_date: date | None = None, 
+        end_date: date | None = None
+):
+    base_filters = build_base_filters(
+        user_id=user_id, 
+        status=status, 
+        year=year, 
+        start_date=start_date,
+        end_date=end_date
+    )
+
+    target_date_column = get_date_column_by_status(status)
+
+    stmt_metrics = (
+        select(
+            func.count(UserBook.id),
+            func.coalesce(func.sum(UserBook.num_pages), 0),
+            func.avg(UserBook.num_pages),
+        )
+        .where(*base_filters)
+    )
+
+    group_by_month = (
+        True if year or (start_date and end_date and start_date.year == end_date.year) 
+        else False
+    )
+    time_format = "YYYY-MM" if group_by_month else "YYYY"
+    time_bucket = func.to_char(target_date_column, time_format)
+
+    books_per_period_stmt = (
+        select(
+            time_bucket.label("period"),
+            func.count(UserBook.id).label("total_books"),
+            func.coalesce(func.sum(UserBook.num_pages),0).label("total_pages")
+        )
+        .where(*base_filters)
+        .group_by(time_bucket)
+        .order_by(time_bucket.desc())
+    )
+
+    metrics_res, period_res, top_authors, top_genres = await asyncio.gather(
+        db.execute(stmt_metrics),
+        db.execute(books_per_period_stmt),
+        get_top_authors(db, base_filters),
+        get_top_genres(db, base_filters)
+    )
+
+    total_books, total_pages_read, average_pages_read = metrics_res.first()
+    period_data = period_res.mappings().all()
+    books_per_period = [{"period": row["period"], "total": row["total_books"]} for row in period_data]
+    pages_per_period = [{"period": row["period"], "total_pages": row["total_pages"]} for row in period_data]
+
+    return {
+        "total_books": total_books,
+        "total_pages_read": total_pages_read,
+        "average_pages_read": round(float(average_pages_read), 2 ),
+        "books_per_period": books_per_period,
+        "pages_per_period": pages_per_period,
+        "top_authors": top_authors,
+        "top_genres": top_genres
+    }
+
+async def get_top_authors(
+        db: AsyncSession,
+        base_filters: list, 
+        limit: int = 10
+): 
+    stmt = (
+        select(
+            Author.name, 
+            func.count(UserBook.id).label("total_books"),
+            func.coalesce(func.sum(UserBook.num_pages), 0).label("total_pages")
+        )
+        .join(Book, UserBook.book_id == Book.key)
+        .join(Book.authors)
+        .where(*base_filters)
+        .group_by(Author.name)
+        .order_by(desc(text("total_books")))
+        .limit(limit)
+    )
+
+    result= await db.execute(stmt)
+    top_authors = result.mappings().all()
+    return top_authors
+
+async def get_top_genres(
+        db: AsyncSession, 
+        base_filters: list, 
+        limit: int = 10
+): 
+
+    stmt = (
+        select(
+            Genre.name, 
+            func.count(UserBook.id).label("total_books"),
+            func.coalesce(func.sum(UserBook.num_pages), 0).label("total_pages")
+        )
+        .join(Book, UserBook.book_id == Book.key)
+        .join(Book.genres)
+        .where(*base_filters)
+        .group_by(Genre.name)
+        .order_by(desc(text("total_books")))
+        .limit(limit)
+    )
+
+    print("--- SQL GÉNEROS ---")
+    print(stmt.compile(compile_kwargs={"literal_binds": True}))
+    print("-------------------")
+
+    result = await db.execute(stmt)
+    top_genres = result.mappings().all()
+
+    return top_genres
+
 
 async def update_user_book(
         user_id: str, 
@@ -215,3 +337,42 @@ async def delete_user_book(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ocurrió un error al intentar eliminar el registro"
             )
+
+
+def build_base_filters(
+        user_id: str,
+        status: str | None = None, 
+        year:  int | str | None = None, 
+        start_date: date | None = None, 
+        end_date: date | None = None
+) -> list:
+    
+    filters = []
+
+    filters = [UserBook.user_id == user_id]
+
+    if status and status in statusesValues:
+        filters.append(UserBook.status == status)
+    
+    if year and str(year) not in ["Todos", ""]:
+        filters.append(UserBook.start_date >= date(year, 1, 1))
+        filters.append(UserBook.finish_date <= date(year, 12,31))
+
+    if start_date:
+        filters.append(UserBook.finish_date >= start_date)
+    
+    if end_date:
+        filters.append(UserBook.finish_date <= end_date)
+
+    return filters
+
+def get_date_column_by_status(status: str = "read"):
+
+    if status == "read":
+        return UserBook.finish_date
+
+    if status in ("reading", "dropped", "plan_to_read"):
+        return func.coalesce(UserBook.start_date, UserBook.created_at)
+
+    return UserBook.created_at
+

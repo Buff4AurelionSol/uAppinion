@@ -16,13 +16,15 @@ class Book(Base):
     genres: Mapped[list["Genre"]] = relationship(
         "Genre",
         secondary=book_genre_association, 
-        back_populates="books"
+        back_populates="books",
+        lazy="selectin"
     )
 
     authors: Mapped[list["Author"]] = relationship(
         "Author",
         secondary=book_authors,
-        back_populates="books"
+        back_populates="books",
+        lazy="selectin"
     )
 
 
