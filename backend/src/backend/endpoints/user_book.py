@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config.db import get_db
 from backend.schemas.user_book import UserBookWithReview, UserBookUpdate
 from backend.services.auth import get_current_user
-from backend.services.user_book import create_user_book_with_review, update_user_book, delete_user_book, get_my_library, get_my_metrics
+from backend.services.user_book import create_user_book_with_review, update_user_book, delete_user_book, get_my_library, get_my_metrics, get_my_years_library
 from datetime import date
 from typing import Literal
 
@@ -43,6 +43,12 @@ async def get_my_metrics_user(
 ):
     return await get_my_metrics(user_id=current_user.id, db= db, status=status, year=year, start_date=start_date, end_date=end_date)
 
+@router.get("/books/years")
+async def get_my_years(
+    current_user: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_my_years_library(user_id=current_user.id, db=db)
 
 @router.post("/books/catalog", status_code=status.HTTP_201_CREATED)
 async def create_user_book_and_review(
