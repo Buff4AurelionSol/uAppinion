@@ -1,6 +1,6 @@
 import math
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, func, desc, text, extract, distinct
+from sqlalchemy import select, or_, func, desc, text, extract, distinct, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -279,9 +279,9 @@ async def get_top_genres(
 async def get_my_years_library(user_id: str, db: AsyncSession):
     stmt = select(
         distinct(
-            extract("year", UserBook.created_at)
+            extract("year", UserBook.created_at).label("year")
         )
-    ).where(UserBook.user_id == user_id)
+    ).where(UserBook.user_id == user_id).order_by(desc(text("year")))
 
     years =  (await db.scalars(stmt)).all()
 
