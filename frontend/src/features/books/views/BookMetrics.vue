@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import Screen from "../../../components/Screen.vue";
 import Select from "../../../components/Select.vue";
 import { useQuery } from "@tanstack/vue-query";
 import { apiBooks } from "../services/apiBook.js";
@@ -12,7 +11,7 @@ import TopComponent from "../../../components/TopComponent.vue";
 const filters = ref({
   year: "Todos",
   status: "read",
-  first_date: "",
+  start_date: "",
   end_date: "",
 });
 
@@ -20,7 +19,7 @@ watch(
   () => filters.value.year,
   (newYear) => {
     if (newYear !== "Periodo personalizado") {
-      filters.value.first_date = "";
+      filters.value.start_date = "";
       filters.value.end_date = "";
     }
   },
@@ -34,7 +33,7 @@ const cleanFiltersParams = computed(() => {
   if (filters.value.year === "Periodo personalizado") {
     return {
       ...params,
-      first_date: filters.value.first_date,
+      start_date: filters.value.start_date,
       end_date: filters.value.end_date,
     };
   }
@@ -44,15 +43,10 @@ const cleanFiltersParams = computed(() => {
 
 const isQueryEnabled = computed(() => {
   if (filters.value.year === "Periodo personalizado") {
-    return !!(filters.value.first_date && filters.value.end_date);
+    return !!(filters.value.start_date && filters.value.end_date);
   }
 
   return true;
-});
-
-const { data: years, isLoading: loadingYears } = useQuery({
-  queryKey: ["readingYears"],
-  queryFn: apiBooks.getMyYearsReaded,
 });
 
 const { data: metricsData, isLoading: isLoadingMetrics } = useQuery({
@@ -61,8 +55,13 @@ const { data: metricsData, isLoading: isLoadingMetrics } = useQuery({
   enabled: isQueryEnabled,
 });
 
+const { data: myYearsData, isLoading: isLoadingYearsData } = useQuery({
+  queryKey: ["myBooksYear"],
+  queryFn: apiBooks.getMyYears,
+});
+
 const yearWithAll = computed(() => {
-  return ["Todos", ...(years.value ?? []), "Periodo personalizado"];
+  return ["Todos", ...myYearsData.value, "Periodo personalizado"];
 });
 
 const isCustomPeriod = computed(
@@ -70,14 +69,14 @@ const isCustomPeriod = computed(
 );
 
 const isSingleYearSelected = computed(() => {
-  const { year, first_date, end_date } = filters.value;
+  const { year, start_date, end_date } = filters.value;
 
   if (year !== "Todos" && year !== "Periodo personalizado") {
     return true;
   }
 
-  if (year === "Periodo personalizado" && first_date && end_date) {
-    const auxFirstDate = first_date.slice(0, 4);
+  if (year === "Periodo personalizado" && start_date && end_date) {
+    const auxFirstDate = start_date.slice(0, 4);
     const auxEndDate = end_date.slice(0, 4);
     return auxFirstDate === auxEndDate;
   }
@@ -88,10 +87,10 @@ const isSingleYearSelected = computed(() => {
 const subTitlePerPeriod = computed(() => {
   if (
     isCustomPeriod.value &&
-    filters.value.first_date &&
+    filters.value.start_date &&
     filters.value.end_date
   ) {
-    return `${filters.value.first_date} al ${filters.value.end_date}`;
+    return `${filters.value.start_date} al ${filters.value.end_date}`;
   }
   if (isSingleYearSelected.value) {
     return filters.value.year;
@@ -247,7 +246,7 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
             >
             <input
               type="date"
-              v-model="filters.first_date"
+              v-model="filters.start_date"
               :disabled="!isCustomPeriod"
               class="h-10 w-full border border-gray-300 dark:border-gray-400 focus:outline-gray-300 dark:focus:outline-gray-400 focus:outline-2 focus:outline-offset-2 p-2 rounded-md transition-all text-black dark:text-white dark:bg-gray-800 disabled:bg-gray-200 dark:disabled:bg-gray-500 disabled:text-gray-400 disabled:border-gray-200 dark:disabled:border-gray-500"
             />
@@ -277,7 +276,7 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
                 class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
               >
                 <p class="text-2xl font-bold text-black dark:text-white">
-                  {{ metricsData?.total_books_read }}
+                  {{ metricsData?.total_books }}
                 </p>
                 <p class="text-sm text-gray-500 dark:text-gray-300">Libros</p>
               </div>
@@ -292,8 +291,6 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
                 <p class="text-sm text-gray-500 dark:text-gray-300">Páginas</p>
               </div>
             </article>
-          </div>
-          <div class="w-full flex flex-col md:flex-row gap-2">
             <article class="w-full">
               <div
                 class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
@@ -303,18 +300,6 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
                 </p>
                 <p class="text-sm text-gray-500 dark:text-gray-300">
                   Promedio de páginas
-                </p>
-              </div>
-            </article>
-            <article class="w-full">
-              <div
-                class="rounded-xl bg-gray-100 dark:bg-gray-600 border border-stone-300 dark:border-stone-800 p-5"
-              >
-                <p class="text-2xl font-bold text-black dark:text-white">
-                  {{ metricsData?.total_time_read }}
-                </p>
-                <p class="text-sm text-gray-500 dark:text-gray-300">
-                  Años de lectura
                 </p>
               </div>
             </article>
@@ -368,8 +353,9 @@ const topGenres = computed(() => metricsData.value?.top_genres ?? []);
                 >{{ item?.name }}</span
               >
               <span class="text-xs text-gray-500 dark:text-gray-300">
-                {{ item?.books }}
-                {{ Number(item?.books) > 1 ? "libros" : "libro" }} .
+                {{ item?.total_books }}
+                {{ Number(item?.total_books) > 1 ? "libros" : "libro" }} .
+                {{ Number(item?.total_pages) }}
               </span>
             </template>
           </TopComponent>
