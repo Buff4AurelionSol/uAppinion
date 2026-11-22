@@ -217,7 +217,7 @@ async def get_my_metrics(
     return {
         "total_books": total_books,
         "total_pages_read": total_pages_read,
-        "average_pages_read": round(float(average_pages_read), 2 ),
+        "average_pages_read": round(float(average_pages_read or 0), 2 ),
         "books_per_period": books_per_period,
         "pages_per_period": pages_per_period,
         "top_authors": top_authors,
