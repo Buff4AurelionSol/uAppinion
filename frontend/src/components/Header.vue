@@ -6,6 +6,7 @@ import ThemeSwitch from "./ThemeSwitch.vue";
 import { ChartLine } from "@lucide/vue";
 import { Library } from "@lucide/vue";
 import { Search } from "@lucide/vue";
+import { LayoutList } from "@lucide/vue";
 
 import { useRoute } from "vue-router";
 import { computed } from "vue";
@@ -136,6 +137,25 @@ const isViewActive = (view) => currentView.value === view;
               :class="[
                 'text-gray-500',
                 isViewActive('metrics')
+                  ? 'dark:text-gray-400'
+                  : 'dark:text-gray-500',
+                'group-hover:text-gray-400',
+              ]"
+            />
+          </router-link>
+        </li>
+        <li>
+          <router-link
+            :to="`/${currentMedia}/tierlist`"
+            class="block p-1 rounded-md transition-colors group"
+            :class="{
+              'bg-white shadow-sm dark:bg-gray-700': isViewActive('tierlist'),
+            }"
+            ><LayoutList
+              stroke-width="2"
+              :class="[
+                'text-gray-500',
+                isViewActive('tierlist')
                   ? 'dark:text-gray-400'
                   : 'dark:text-gray-500',
                 'group-hover:text-gray-400',
