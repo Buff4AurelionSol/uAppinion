@@ -10,8 +10,15 @@ import AnimeCatalog from "../features/anime/views/AnimeCatalog.vue";
 import BookCatalog from "../features/books/views/BookCatalog.vue";
 import LoginView from "../features/login/views/LoginView.vue";
 import { useAuth } from "../stores/auth.js";
+import BookTierList from "../features/books/views/BookTierList.vue";
 
 const routes = [
+  {
+    path: "/",
+    redirect: {
+      name: "Books Catalog",
+    },
+  },
   {
     path: "/login",
     name: "Login",
@@ -33,6 +40,12 @@ const routes = [
     path: "/books/metrics",
     name: "Books Metrics",
     component: BookMetrics,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/books/tierlist",
+    name: "Books Tierlist",
+    component: BookTierList,
     meta: { requiresAuth: true },
   },
   {
@@ -76,8 +89,10 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
   const authStore = useAuth();
+
+  if (!authStore.isReady) await authStore.restoreSession();
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return { name: "Login" };

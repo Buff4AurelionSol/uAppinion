@@ -7,17 +7,29 @@ import { ChartLine } from "@lucide/vue";
 import { Library } from "@lucide/vue";
 import { Search } from "@lucide/vue";
 import { LayoutList } from "@lucide/vue";
+import { LogOut } from "@lucide/vue";
 
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { computed } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import { useAuth } from "../stores/auth.js";
 
 const route = useRoute();
+const router = useRouter();
+const queryClient = useQueryClient();
+const authStore = useAuth();
 
 const currentMedia = computed(() => route.path.split("/")[1] || "books");
 const currentView = computed(() => route.path.split("/")[2] || "catalog");
 
 const isMediaActive = (media) => currentMedia.value === media;
 const isViewActive = (view) => currentView.value === view;
+
+const handleLogout = async () => {
+  await authStore.logout();
+  queryClient.clear();
+  router.push({ name: "Login" });
+};
 </script>
 
 <template>
@@ -166,6 +178,17 @@ const isViewActive = (view) => currentView.value === view;
       </ul>
     </nav>
 
-    <ThemeSwitch />
+    <div class="flex items-center gap-1">
+      <button
+        type="button"
+        title="Cerrar sesión"
+        @click="handleLogout"
+        class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-300 hover:text-black dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+      >
+        <LogOut stroke-width="2" class="h-4 w-4" />
+        <span class="hidden sm:inline">Cerrar sesión</span>
+      </button>
+      <ThemeSwitch />
+    </div>
   </header>
 </template>

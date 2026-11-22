@@ -6,19 +6,32 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-let isRefreshing = false;
-let failedQueue = [];
+let refreshPromise = null;
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
+// Unica petición de refresh en vuelo: la comparten el arranque de la app y
+// el interceptor de 401, para no rotar el refresh token dos veces.
+export const refreshAccessToken = () => {
+  if (refreshPromise) return refreshPromise;
+
+  // axios "crudo" para que esta petición no vuelva a pasar por el interceptor.
+  refreshPromise = axios
+    .post(`${api.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true })
+    .then(({ data }) => {
+      useAuth().authData = data;
+      return data;
+    })
+    .catch((error) => {
+      useAuth().authData = null;
+      throw error;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
 };
+
+const isAuthRequest = (url = "") => url.startsWith("/auth/");
 
 api.interceptors.request.use(
   (config) => {
@@ -37,49 +50,24 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthRequest(originalRequest.url)
+    ) {
       originalRequest._retry = true;
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers["Authorization"] = `Bearer ${token}`;
-            return api(originalRequest);
-          })
-          .catch((error) => {
-            return Promise.reject(error);
-          });
-      }
-
-      isRefreshing = true;
-      const authStore = useAuth();
 
       try {
-        const { data } = await axios.post(
-          "http://localhost:8000/auth/refresh",
-          {},
-          { withCredentials: true },
-        );
-
-        const newAccessToken = data.access_token;
-        authStore.authData = data;
-
-        processQueue(null, newAccessToken);
-
-        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-
+        await refreshAccessToken();
+        originalRequest.headers["Authorization"] =
+          `Bearer ${useAuth().authData.access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-
-        authStore.authData = null;
-
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   },
 );

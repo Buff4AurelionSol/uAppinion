@@ -9,8 +9,8 @@ import { createPinia } from "pinia";
 const pinia = createPinia();
 
 createApp(App)
+  .use(pinia)
   .use(router)
   .use(VueQueryPlugin)
   .use(VueApexCharts)
-  .use(pinia)
   .mount("#app");
